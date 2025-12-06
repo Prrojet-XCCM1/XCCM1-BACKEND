@@ -17,4 +17,26 @@ public class KafkaTopicConfig {
                 .replicas(1)
                 .build();
     }
+    @Bean
+    public NewTopic enrollmentCreatedTopic() {
+        return TopicBuilder.name("enrollment-created")
+            .partitions(3)
+            .replicas(1)
+            .build();
+}
+
+    @Bean
+    public NewTopic courseCompletedTopic() {
+        return TopicBuilder.name("course-completed")
+            .partitions(3)
+            .replicas(1)
+            .build();
+}
+@Bean
+public NewTopic enrollmentApprovedTopic() {
+    return TopicBuilder.name("enrollment-approved")
+            .partitions(3)
+            .replicas(1)
+            .build();
+}
 }
