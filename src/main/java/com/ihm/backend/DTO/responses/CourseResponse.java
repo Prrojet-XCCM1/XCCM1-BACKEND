@@ -26,5 +26,6 @@ public class CourseResponse {
     private LocalDateTime createdAt;
     private LocalDateTime publishedAt;
     private String content;
+    private String coverImage;
     
 }

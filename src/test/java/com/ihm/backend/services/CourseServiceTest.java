@@ -190,10 +190,10 @@ public class CourseServiceTest {
         when(courseRepository.save(mockCourse)).thenReturn(mockCourse);
         when(courseMapper.toResponse(mockCourse)).thenReturn(mockResponse);
 
-        CourseResponse result = courseService.changeCourseStatus(CourseStatus.ARCHIVE, 1);
+        CourseResponse result = courseService.changeCourseStatus(CourseStatus.PUBLISHED, 1);
 
         assertEquals(1, result.getId());
-        assertEquals(CourseStatus.ARCHIVE, mockCourse.getStatus());
+        assertEquals(CourseStatus.PUBLISHED, mockCourse.getStatus());
     }
 
     @Test
@@ -201,7 +201,7 @@ public class CourseServiceTest {
         when(courseRepository.findById(1)).thenReturn(Optional.empty());
 
         Exception ex = assertThrows(Exception.class,
-                () -> courseService.changeCourseStatus(CourseStatus.ARCHIVE, 1));
+                () -> courseService.changeCourseStatus(CourseStatus.PUBLISHED, 1));
 
         assertEquals("Course does not exist", ex.getMessage());
     }

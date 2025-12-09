@@ -15,7 +15,7 @@ import com.ihm.backend.entities.Course;
 @Mapper(componentModel = "spring")
 public interface CourseMapper{
     @Mapping(target = "id",ignore = true)
-    @Mapping(target = "status",constant = "BROUILLON")
+    @Mapping(target = "status",constant = "DRAFT")
     @Mapping(target = "createdAt",expression = "java(java.time.LocalDateTime.now())")
     Course toEntity(CourseCreateRequestDTO course);
 

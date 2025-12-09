@@ -1,10 +1,13 @@
 package com.ihm.backend.controllers;
 
 import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.multipart.MultipartFile;
 
 import com.ihm.backend.DTO.responses.CourseResponse;
 import com.ihm.backend.enums.CourseStatus;
 import com.ihm.backend.services.CourseService;
+
+import jakarta.mail.Multipart;
 
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
@@ -15,6 +18,7 @@ import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
 
 import com.ihm.backend.DTO.requests.*;
 import org.springframework.web.bind.annotation.PutMapping;
@@ -48,11 +52,34 @@ public class CourseController {
         }
     }
 
+    @PostMapping("/{courseId}/coverImage/upload")
+    public ResponseEntity<?> uploadImage(@PathVariable Integer courseId,@RequestParam MultipartFile image) {
+        try {
+            return ResponseEntity.status(HttpStatus.OK)
+                     .body(courseService.uploadCoverImage(courseId, image));
+        } catch (Exception e) {
+            return ResponseEntity.badRequest().body(e.getMessage());
+        }
+        
+        
+    }
+    
+
       @GetMapping("/{courseId}/setStatus/{status}")
-    public ResponseEntity<?> changeCourseStatus(@PathVariable Integer courseId,@PathVariable CourseStatus courseStatus) {
+    public ResponseEntity<?> changeCourseStatus(@PathVariable Integer courseId,@PathVariable CourseStatus status) {
         try {
           return ResponseEntity.status(HttpStatus.OK)
-                     .body(courseService.changeCourseStatus(courseStatus, courseId));
+                     .body(courseService.changeCourseStatus(status, courseId));
+
+        } catch (Exception e) {
+            return ResponseEntity.badRequest().body(e.getMessage());
+        }
+    }
+     @GetMapping("/{authorId}/status/{status}")
+    public ResponseEntity<?> getCoureByStatusForAuthor(@PathVariable Integer authorId,@PathVariable CourseStatus status) {
+        try {
+          return ResponseEntity.status(HttpStatus.OK)
+                     .body(courseService.getCoursesByStatusForAuthor(authorId,status));
 
         } catch (Exception e) {
             return ResponseEntity.badRequest().body(e.getMessage());
