@@ -1,5 +1,4 @@
-// src/main/java/com/ihm/backend/controller/AuthController.java
-package com.ihm.backend.controller;
+package com.ihm.backend.controllers;
 
 import com.ihm.backend.domain.dto.request.*;
 import com.ihm.backend.domain.dto.response.ApiResponse;

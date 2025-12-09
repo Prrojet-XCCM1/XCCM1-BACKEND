@@ -5,11 +5,7 @@
 	<parent>
 		<groupId>org.springframework.boot</groupId>
 		<artifactId>spring-boot-starter-parent</artifactId>
-<<<<<<< HEAD
 		<version>3.5.0</version>
-=======
-		<version>3.5.9-SNAPSHOT</version>
->>>>>>> b02be8e9be595640984cb313911517ebf30a19a9
 		<relativePath/> <!-- lookup parent from repository -->
 	</parent>
 	<groupId>com.ihm</groupId>
