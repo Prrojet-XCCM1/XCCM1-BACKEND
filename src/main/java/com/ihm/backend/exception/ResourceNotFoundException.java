@@ -1,23 +1,12 @@
-// ==================== EXCEPTIONS 404 - NOT FOUND ====================
+// src/main/java/com/ihm/backend/exception/ResourceNotFoundException.java
+package com.ihm.backend.exception;
 
-package cm.enspy.xccm.exception;
+import org.springframework.http.HttpStatus;
+import org.springframework.web.bind.annotation.ResponseStatus;
 
-/**
- * Exception levée quand une ressource n'est pas trouvée
- */
-public class ResourceNotFoundException extends BusinessException {
-    
-    public ResourceNotFoundException(String resourceName, Object identifier) {
-        super(
-            String.format("%s introuvable avec l'identifiant: %s", resourceName, identifier),
-            "RESOURCE_NOT_FOUND",
-            404
-        );
-    }
-    
+@ResponseStatus(HttpStatus.NOT_FOUND)
+public class ResourceNotFoundException extends RuntimeException {
     public ResourceNotFoundException(String message) {
-        super(message, "RESOURCE_NOT_FOUND", 404);
+        super(message);
     }
 }
-
-

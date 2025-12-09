@@ -9,7 +9,7 @@ import com.ihm.backend.domain.enums.UserRole;
 import com.ihm.backend.repository.*;
 import com.ihm.backend.service.AuthService;
 import com.ihm.backend.exception.*;
-import com.ihm.backend.security.JwtService;
+import com.ihm.backend.service.JwtService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.authentication.*;
 import org.springframework.security.core.userdetails.*;
@@ -63,7 +63,7 @@ public class AuthServiceImpl implements AuthService {
 
     @Override
     @Transactional
-    public ApiResponse<?> register(RegisterRequest request) {
+    public ApiResponse<AuthenticationResponse> register(RegisterRequest request) {
         if (!request.getPassword().equals(request.getConfirmPassword())) {
             return ApiResponse.badRequest("Les mots de passe ne correspondent pas", null);
         }
@@ -137,7 +137,7 @@ public class AuthServiceImpl implements AuthService {
     }
 
     @Override
-    public ApiResponse<?> requestPasswordReset(PasswordResetRequest request) {
+    public ApiResponse<String> requestPasswordReset(PasswordResetRequest request) {
         User user = userRepository.findByEmail(request.getEmail())
             .orElseThrow(() -> new ResourceNotFoundException("Utilisateur non trouvé"));
 
@@ -159,7 +159,7 @@ public class AuthServiceImpl implements AuthService {
 
     @Override
     @Transactional
-    public ApiResponse<?> resetPassword(PasswordUpdateRequest request) {
+    public ApiResponse<String> resetPassword(PasswordUpdateRequest request) {
         PasswordResetToken token = tokenRepository.findByToken(request.getToken())
             .orElseThrow(() -> new ResourceNotFoundException("Token invalide ou expiré"));
 

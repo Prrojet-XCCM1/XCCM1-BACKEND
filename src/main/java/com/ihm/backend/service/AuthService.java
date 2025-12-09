@@ -12,11 +12,9 @@ public interface AuthService {
 
     ApiResponse<AuthenticationResponse> authenticate(AuthenticationRequest request);
 
-    ApiResponse<?> register(RegisterRequest request);
+    ApiResponse<AuthenticationResponse> register(RegisterRequest request);  // ← plus ?
 
-    ApiResponse<?> requestPasswordReset(PasswordResetRequest request);
+    ApiResponse<String> requestPasswordReset(PasswordResetRequest request); // ← String ou Void
 
-    ApiResponse<?> resetPassword(PasswordUpdateRequest request);
-
-    ApiResponse<?> verifyEmail(String token); // si tu veux plus tard
+    ApiResponse<String> resetPassword(PasswordUpdateRequest request);       // ← String
 }

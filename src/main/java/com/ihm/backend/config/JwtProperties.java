@@ -1,4 +1,4 @@
-package cm.ihm.backend.config;
+package com.ihm.backend.config;
 
 
 import org.springframework.boot.context.properties.ConfigurationProperties;
