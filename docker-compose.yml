@@ -29,7 +29,8 @@ services:
       interval: 10s
       timeout: 5s
       retries: 10
-
+    networks:
+      - xccm-network
   kafka:
     image: confluentinc/cp-kafka:7.5.0
     depends_on:
@@ -47,7 +48,7 @@ services:
       
       # PLAINTEXT est interne à Docker, utilise le port 9092 interne du conteneur.
       # OUTSIDE est pour l'externe (localhost), il utilise le port 9093 interne du conteneur.
-      KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://kafka:9092,OUTSIDE://localhost:9092 
+      KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://kafka:9092,OUTSIDE://localhost:9094 
       
       KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: PLAINTEXT:PLAINTEXT,OUTSIDE:PLAINTEXT
       
@@ -58,6 +59,8 @@ services:
       interval: 30s
       timeout: 10s
       retries: 5
+    networks:
+      - xccm-network
 
   app:
     build: .

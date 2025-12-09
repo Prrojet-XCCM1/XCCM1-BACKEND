@@ -20,7 +20,7 @@ public class SwaggerConfig {
     public OpenAPI customOpenAPI() {
         return new OpenAPI()
             .info(new Info()
-                    .title("Plateforme de cours Électronique - API")
+                    .title("XXCM1 : Plateforme de cours Électronique - API")
                     .description("""
                             ## Documentation API Complète
 
@@ -30,7 +30,7 @@ public class SwaggerConfig {
                     .version("1.0.0")
                     .contact(new Contact()
                             .name("Équipe Technique")
-                            .email("piodjiele@gmail.com")
+                            .email("azangueleonel9@gmail.com")
                             .url("https://github.com/Prrojet-XCCM1/XCCM1-BACKEND"))
                     .license(new License()
                             .name("MIT License")
