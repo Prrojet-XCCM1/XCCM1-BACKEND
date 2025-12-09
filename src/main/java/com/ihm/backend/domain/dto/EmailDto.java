@@ -1,12 +1,13 @@
-package cm.enspy.xccm.domain.dto;
+package com.ihm.backend.domain.dto;
 
-import cm.enspy.xccm.domain.enums.EmailTemplate;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 
 import java.util.Map;
+
+import com.ihm.backend.domain.enums.EmailTemplate;
 
 /**
  * DTO pour l'envoi d'emails

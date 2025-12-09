@@ -1,8 +1,9 @@
-package cm.enspy.xccm.domain.dto.request;
+package com.ihm.backend.domain.dto.request;
 
 import java.util.List;
 
-import cm.enspy.xccm.domain.enums.UserRole;
+import com.ihm.backend.domain.enums.UserRole;
+
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;

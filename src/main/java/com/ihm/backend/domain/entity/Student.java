@@ -1,11 +1,7 @@
-package cm.enspy.xccm.domain.entity;
+package com.ihm.backend.domain.entity;
 
-import org.springframework.data.relational.core.mapping.Column;
-import org.springframework.data.relational.core.mapping.Table;
-import lombok.AllArgsConstructor;
-import lombok.Data;
-import lombok.EqualsAndHashCode;
-import lombok.NoArgsConstructor;
+import jakarta.persistence.*;
+import lombok.*;
 import lombok.experimental.SuperBuilder;
 
 @Data
@@ -13,39 +9,34 @@ import lombok.experimental.SuperBuilder;
 @SuperBuilder
 @NoArgsConstructor
 @AllArgsConstructor
-@Table("students")
+
+@Entity
+@DiscriminatorValue("STUDENT")
 public class Student extends User {
 
-    @Column("promotion")
     private String promotion;
 
-    @Column("specialization")
     private String specialization;
 
-    @Column("level")
     private String level;
 
-    @Column("average_grade")
+    @Column(name = "average_grade")
     private Double averageGrade;
 
-    @Column("current_semester")
+    @Column(name = "current_semester")
     private Integer currentSemester;
 
-    @Column("major")
     private String major;
 
-    @Column("minor")
     private String minor;
 
-    @Column("interests")
-    private String interests; // Stocké comme JSON/String
+    private String interests;        // JSON string
 
-    @Column("activities")
-    private String activities; // Stocké comme JSON/String
+    private String activities;       // JSON string
 
-    @Column("study_field")
+    @Column(name = "study_field")
     private String studyField;
 
-    @Column("academic_year")
+    @Column(name = "academic_year")
     private String academicYear;
 }

@@ -1,4 +1,4 @@
-package cm.enspy.xccm.domain.dto.response;
+package com.ihm.backend.domain.dto.response;
 
 import com.fasterxml.jackson.annotation.JsonInclude;
 import io.swagger.v3.oas.annotations.media.Schema;

@@ -1,11 +1,7 @@
-package cm.enspy.xccm.domain.entity;
+package com.ihm.backend.domain.entity;
 
-import org.springframework.data.relational.core.mapping.Column;
-import org.springframework.data.relational.core.mapping.Table;
-import lombok.AllArgsConstructor;
-import lombok.Data;
-import lombok.EqualsAndHashCode;
-import lombok.NoArgsConstructor;
+import jakarta.persistence.*;
+import lombok.*;
 import lombok.experimental.SuperBuilder;
 
 @Data
@@ -13,33 +9,31 @@ import lombok.experimental.SuperBuilder;
 @SuperBuilder
 @NoArgsConstructor
 @AllArgsConstructor
-@Table("teachers")
+
+@Entity
+@DiscriminatorValue("TEACHER")
 public class Teacher extends User {
 
-    @Column("grade")
     private String grade;
 
-    @Column("certification")
     private String certification;
 
-    @Column("teaching_goal")
+    @Column(name = "teaching_goal")
     private String teachingGoal;
 
-    @Column("subjects")
-    private String subjects; // Stocké comme JSON/String
+    private String subjects;         // JSON string
 
-    @Column("teaching_grades")
-    private String teachingGrades; // Stocké comme JSON/String
+    @Column(name = "teaching_grades")
+    private String teachingGrades;   // JSON string
 
-    @Column("department")
     private String department;
 
-    @Column("years_of_experience")
+    @Column(name = "years_of_experience")
     private Integer yearsOfExperience;
 
-    @Column("office_location")
+    @Column(name = "office_location")
     private String officeLocation;
 
-    @Column("office_hours")
+    @Column(name = "office_hours")
     private String officeHours;
 }

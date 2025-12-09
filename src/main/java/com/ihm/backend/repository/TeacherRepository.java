@@ -1,4 +1,4 @@
-package cm.enspy.xccm.repository;
+package com.ihm.backend.repository;
 
 import cm.enspy.xccm.domain.entity.Teacher;
 import org.springframework.data.r2dbc.repository.R2dbcRepository;

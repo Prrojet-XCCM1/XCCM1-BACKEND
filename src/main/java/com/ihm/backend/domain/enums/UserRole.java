@@ -1,5 +1,4 @@
-package cm.enspy.xccm.domain.enums;
-
+package com.ihm.backend.domain.enums;
 public enum UserRole {
     STUDENT,
     TEACHER,

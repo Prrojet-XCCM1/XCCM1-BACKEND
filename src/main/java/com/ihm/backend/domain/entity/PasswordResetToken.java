@@ -1,35 +1,50 @@
-package cm.enspy.xccm.domain.entity;
+package com.ihm.backend.domain.entity;
 
-import lombok.AllArgsConstructor;
-import lombok.Builder;
-import lombok.Data;
-import lombok.NoArgsConstructor;
-import org.springframework.data.annotation.Id;
-import org.springframework.data.relational.core.mapping.Column;
-import org.springframework.data.relational.core.mapping.Table;
+import jakarta.persistence.*;
+import lombok.*;
 
 import java.time.LocalDateTime;
 import java.util.UUID;
 
+@Entity
+@Table(name = "password_reset_tokens")
 @Data
 @Builder
 @NoArgsConstructor
 @AllArgsConstructor
-@Table("password_reset_tokens")
+@ToString(exclude = "user") // évite les boucles infinies si tu ajoutes la relation inverse
+@EqualsAndHashCode(exclude = "user")
 public class PasswordResetToken {
-    
+
     @Id
+    @GeneratedValue
+    @Column(columnDefinition = "uuid", updatable = false, nullable = false)
     private UUID id;
-    
-    @Column("token")
+
+    @Column(nullable = false, unique = true, length = 512)
     private String token;
-    
-    @Column("user_id")
+
+    @Column(name = "user_id", nullable = false, updatable = false)
     private UUID userId;
-    
-    @Column("expiry_date")
+
+    // Optionnel : relation bidirectionnelle propre (recommandée)
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "user_id", insertable = false, updatable = false)
+    private User user;
+
+    @Column(name = "expiry_date", nullable = false)
     private LocalDateTime expiryDate;
-    
-    @Column("used")
-    private Boolean used;
+
+    @Column(nullable = false)
+    @Builder.Default
+    private Boolean used = false;
+
+    // Méthode utilitaire très pratique
+    public boolean isExpired() {
+        return LocalDateTime.now().isAfter(expiryDate);
+    }
+
+    public boolean isUsable() {
+        return !used && !isExpired();
+    }
 }

@@ -1,4 +1,4 @@
-package cm.enspy.xccm.domain.enums;
+package com.ihm.backend.domain.enums;
 
 /**
  * Types de templates d'email disponibles

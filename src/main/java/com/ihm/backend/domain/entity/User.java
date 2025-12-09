@@ -1,18 +1,9 @@
-package cm.enspy.xccm.domain.entity;
+package com.ihm.backend.domain.entity;
 
-import java.time.LocalDateTime;
-import java.util.Collection;
-import java.util.UUID;
+import com.fasterxml.jackson.annotation.*;
+import com.ihm.backend.domain.enums.UserRole;
 
-import org.springframework.data.annotation.Id;
-import org.springframework.data.relational.core.mapping.Column;
-import org.springframework.data.relational.core.mapping.Table;
-
-import com.fasterxml.jackson.annotation.JsonProperty;
-import com.fasterxml.jackson.annotation.JsonSubTypes;
-import com.fasterxml.jackson.annotation.JsonTypeInfo;
-
-import cm.enspy.xccm.domain.enums.UserRole;
+import jakarta.persistence.*;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
@@ -20,94 +11,115 @@ import lombok.NoArgsConstructor;
 import lombok.experimental.SuperBuilder;
 import org.springframework.security.core.GrantedAuthority;
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
+import org.springframework.security.core.userdetails.UserDetails;
+
+import java.time.LocalDateTime;
+import java.util.Collection;
+import java.util.List;
+import java.util.UUID;
 
 @Data
 @SuperBuilder
 @NoArgsConstructor
 @AllArgsConstructor
-@Table("users")
-@JsonTypeInfo(use = JsonTypeInfo.Id.NAME, property = "type")
+
+@Entity
+@Table(name = "users")
+@Inheritance(strategy = InheritanceType.SINGLE_TABLE)
+@DiscriminatorColumn(name = "type", discriminatorType = DiscriminatorType.STRING)
+@JsonTypeInfo(
+    use = JsonTypeInfo.Id.NAME,
+    property = "type"
+)
 @JsonSubTypes({
     @JsonSubTypes.Type(value = Student.class, name = "STUDENT"),
     @JsonSubTypes.Type(value = Teacher.class, name = "TEACHER")
 })
-public abstract class User implements org.springframework.security.core.userdetails.UserDetails {
+public abstract class User implements UserDetails {
 
     @Id
+    @GeneratedValue
+    @Column(columnDefinition = "uuid")
     private UUID id;
 
-    @Column("first_name")
+    @Column(name = "first_name", nullable = false)
     private String firstName;
 
-    @Column("last_name")
+    @Column(name = "last_name", nullable = false)
     private String lastName;
 
-    @Column("email")
+    @Column(nullable = false, unique = true)
     private String email;
 
-    @Column("password")
+    @Column(nullable = false)
     @JsonProperty(access = JsonProperty.Access.WRITE_ONLY)
     private String password;
 
-    @Column("role")
+    @Enumerated(EnumType.STRING)
+    @Column(nullable = false)
     private UserRole role;
 
-    @Column("photo_url")
+    @Column(name = "photo_url")
     private String photoUrl;
 
-    @Column("city")
     private String city;
 
-    @Column("university")
     private String university;
 
-    @Column("registration_date")
+    @Column(name = "registration_date")
     private LocalDateTime registrationDate;
 
-    @Column("last_login_at")
+    @Column(name = "last_login_at")
     private LocalDateTime lastLoginAt;
 
-    @Column("created_at")
+    @Column(name = "created_at")
     private LocalDateTime createdAt;
 
-    
+    @Builder.Default
+    private boolean active = true;
 
     @Builder.Default
-    private boolean isActive = true;
+    private boolean verified = false;
 
-    @Builder.Default
-    private boolean isVerified = false;
-
+    @Transient // Pas stocké en base, calculé
+    @JsonIgnore
     @Override
     public Collection<? extends GrantedAuthority> getAuthorities() {
-        return java.util.List.of(new SimpleGrantedAuthority("ROLE_" + role.name()));
+        return List.of(new SimpleGrantedAuthority("ROLE_" + role.name()));
     }
 
     @Override
+    @Transient
+    @JsonIgnore
     public String getUsername() {
         return email;
     }
 
     @Override
+    @Transient
+    @JsonIgnore
     public boolean isAccountNonExpired() {
         return true;
     }
 
     @Override
+    @Transient
+    @JsonIgnore
     public boolean isAccountNonLocked() {
-        return isActive;
+        return active;
     }
 
     @Override
+    @Transient
+    @JsonIgnore
     public boolean isCredentialsNonExpired() {
         return true;
     }
 
     @Override
+    @Transient
+    @JsonIgnore
     public boolean isEnabled() {
-        return isActive && isVerified;
+        return active && verified;
     }
-
-    
-   
 }

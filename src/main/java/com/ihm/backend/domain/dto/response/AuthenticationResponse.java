@@ -1,14 +1,16 @@
-package cm.enspy.xccm.domain.dto.response;
+package com.ihm.backend.domain.dto.response;
 
-import cm.enspy.xccm.domain.entity.Student;
-import cm.enspy.xccm.domain.entity.Teacher;
-import cm.enspy.xccm.domain.enums.UserRole;
+
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 
 import java.util.UUID;
+
+import com.ihm.backend.domain.entity.Student;
+import com.ihm.backend.domain.entity.Teacher;
+import com.ihm.backend.domain.enums.UserRole;
 
 @Data
 @Builder

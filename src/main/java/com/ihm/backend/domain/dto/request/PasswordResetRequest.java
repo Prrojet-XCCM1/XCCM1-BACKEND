@@ -1,4 +1,4 @@
-package cm.enspy.xccm.domain.dto.request;
+package com.ihm.backend.domain.dto.request;
 
 import lombok.AllArgsConstructor;
 import lombok.Builder;
