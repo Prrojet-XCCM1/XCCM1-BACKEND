@@ -1,4 +1,3 @@
-// AuthServiceImpl.java (implémentation concrète)
 package com.ihm.backend.service;
 
 import com.ihm.backend.domain.dto.request.*;
@@ -6,11 +5,10 @@ import com.ihm.backend.domain.dto.response.*;
 import com.ihm.backend.domain.entity.*;
 import com.ihm.backend.domain.entity.User;
 import com.ihm.backend.domain.enums.UserRole;
-import com.ihm.backend.repository.*;
-import com.ihm.backend.service.AuthService;
 import com.ihm.backend.exception.*;
-import com.ihm.backend.service.JwtService;
+import com.ihm.backend.repository.*;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.security.authentication.*;
 import org.springframework.security.core.userdetails.*;
 import org.springframework.security.crypto.password.PasswordEncoder;
@@ -20,6 +18,7 @@ import org.springframework.transaction.annotation.Transactional;
 import java.time.LocalDateTime;
 import java.util.UUID;
 
+@Slf4j
 @Service
 @RequiredArgsConstructor
 @Transactional
@@ -32,7 +31,7 @@ public class AuthServiceImpl implements AuthService {
     private final PasswordEncoder passwordEncoder;
     private final JwtService jwtService;
     private final AuthenticationManager authenticationManager;
-    private final EmailService emailService; // tu le crées plus tard
+    private final EmailService emailService;
 
     @Override
     public ApiResponse<AuthenticationResponse> authenticate(AuthenticationRequest request) {
@@ -64,35 +63,68 @@ public class AuthServiceImpl implements AuthService {
     @Override
     @Transactional
     public ApiResponse<AuthenticationResponse> register(RegisterRequest request) {
+        log.info("Tentative d'inscription pour: {}", request.getEmail());
+        
+        // Validation des mots de passe
         if (!request.getPassword().equals(request.getConfirmPassword())) {
             return ApiResponse.badRequest("Les mots de passe ne correspondent pas", null);
         }
 
+        // Vérification email unique
         if (userRepository.existsByEmail(request.getEmail())) {
             return ApiResponse.conflict("Cet email est déjà utilisé", null);
         }
 
-        User user = switch (request.getRole()) {
-            case STUDENT -> buildStudent(request);
-            case TEACHER -> buildTeacher(request);
-            default -> throw new IllegalArgumentException("Rôle non supporté: " + request.getRole());
-        };
+        User user;
+        try {
+            user = switch (request.getRole()) {
+                case STUDENT -> buildStudent(request);
+                case TEACHER -> buildTeacher(request);
+                default -> throw new IllegalArgumentException("Rôle non supporté: " + request.getRole());
+            };
+        } catch (NumberFormatException e) {
+            log.error("Erreur de conversion numérique: {}", e.getMessage());
+            return ApiResponse.badRequest("Format numérique invalide. Vérifiez averageGrade ou currentSemester", null);
+        }
 
+        // Hash du mot de passe
         user.setPassword(passwordEncoder.encode(request.getPassword()));
         user.setRegistrationDate(LocalDateTime.now());
         user.setCreatedAt(LocalDateTime.now());
 
+        // Sauvegarde
         User saved = userRepository.save(user);
+        log.info("Utilisateur créé: {}", saved.getEmail());
 
+        // Génération token
         String jwt = jwtService.generateToken(saved);
         AuthenticationResponse response = AuthenticationResponse.fromUser(saved, jwt);
-
-        // TODO : envoyer email de bienvenue/vérification
 
         return ApiResponse.created("Inscription réussie", response);
     }
 
     private Student buildStudent(RegisterRequest r) {
+        // Conversion sécurisée de averageGrade
+        Double averageGrade = null;
+        if (r.getAverageGrade() != null && !r.getAverageGrade().isEmpty()) {
+            try {
+                averageGrade = Double.parseDouble(r.getAverageGrade());
+            } catch (NumberFormatException e) {
+                averageGrade = 0.0; // Valeur par défaut
+                log.warn("averageGrade invalide '{}', utilisation de 0.0", r.getAverageGrade());
+            }
+        }
+
+        // Conversion sécurisée de currentSemester
+        Integer currentSemester = null;
+        if (r.getCurrentSemester() != null && !r.getCurrentSemester().isEmpty()) {
+            try {
+                currentSemester = Integer.parseInt(r.getCurrentSemester());
+            } catch (NumberFormatException e) {
+                log.warn("currentSemester invalide '{}', laissé null", r.getCurrentSemester());
+            }
+        }
+
         return Student.builder()
             .email(r.getEmail())
             .firstName(r.getFirstName())
@@ -104,8 +136,8 @@ public class AuthServiceImpl implements AuthService {
             .promotion(r.getPromotion())
             .specialization(r.getSpecialization())
             .level(r.getLevel())
-            .averageGrade(Double.valueOf(r.getAverageGrade() != null ? r.getAverageGrade() : "0"))
-            .currentSemester(r.getCurrentSemester() != null ? Integer.valueOf(r.getCurrentSemester()) : null)
+            .averageGrade(averageGrade)
+            .currentSemester(currentSemester)
             .major(r.getMajor())
             .minor(r.getMinor())
             .studyField(r.getStudyField())
@@ -151,7 +183,6 @@ public class AuthServiceImpl implements AuthService {
 
         tokenRepository.save(resetToken);
 
-        // TODO : envoyer email avec lien : /reset-password?token=xxx
         emailService.sendPasswordResetEmail(user.getEmail(), token);
 
         return ApiResponse.success("Email de réinitialisation envoyé");
