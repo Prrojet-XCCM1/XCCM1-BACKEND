@@ -88,6 +88,12 @@ public abstract class User implements UserDetails {
         return List.of(new SimpleGrantedAuthority("ROLE_" + role.name()));
     }
 
+
+
+    public String getFullName() {
+    return (firstName != null ? firstName : "") + " " + (lastName != null ? lastName : "");
+    }
+
     @Override
     @Transient
     @JsonIgnore

@@ -12,7 +12,7 @@ import reactor.core.publisher.Mono;
 @RequiredArgsConstructor
 public class AuthenticationController {
 
-    private final AuthenticationService authenticationService;
+    private final AuthService authenticationService;
 
     @PostMapping("/register")
     public Mono<AuthenticationResponse> register(@RequestBody RegisterRequest request) {
