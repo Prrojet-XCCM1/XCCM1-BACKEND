@@ -1,9 +1,12 @@
+// src/main/java/com/ihm/backend/security/JwtAuthenticationEntryPoint.java
+
 package com.ihm.backend.security;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.ihm.backend.domain.dto.response.ApiResponse;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
+import lombok.RequiredArgsConstructor;
 import org.springframework.http.MediaType;
 import org.springframework.security.core.AuthenticationException;
 import org.springframework.security.web.AuthenticationEntryPoint;
@@ -13,31 +16,26 @@ import java.io.IOException;
 import java.nio.charset.StandardCharsets;
 
 @Component
+@RequiredArgsConstructor
 public class JwtAuthenticationEntryPoint implements AuthenticationEntryPoint {
-    
-    private final ObjectMapper objectMapper;
 
-    public JwtAuthenticationEntryPoint(ObjectMapper objectMapper) {
-        this.objectMapper = objectMapper;
-    }
+    private final ObjectMapper objectMapper; // Celui avec @Primary
 
     @Override
-    public void commence(HttpServletRequest request, 
+    public void commence(HttpServletRequest request,
                          HttpServletResponse response,
                          AuthenticationException authException) throws IOException {
-        
-        // Définir le type de contenu avec encodage UTF-8
-        response.setContentType(MediaType.APPLICATION_JSON_VALUE + ";charset=UTF-8");
+
         response.setStatus(HttpServletResponse.SC_UNAUTHORIZED);
-        response.setCharacterEncoding(StandardCharsets.UTF_8.name()); // Forcer UTF-8
-        
+        response.setContentType(MediaType.APPLICATION_JSON_VALUE);
+        response.setCharacterEncoding(StandardCharsets.UTF_8.name());
+
         ApiResponse<Void> apiResponse = ApiResponse.<Void>unauthorized(
-            "Accès non autorisé", // Avec accents corrects
-            authException != null ? authException.getMessage() : "Full authentication is required to access this resource"
+                "Accès non autorisé",
+                authException != null ? authException.getMessage() : "Token manquant ou invalide"
         );
-        
-        final String jsonResponse = objectMapper.writeValueAsString(apiResponse);
-        response.getWriter().write(jsonResponse);
+
+        response.getWriter().write(objectMapper.writeValueAsString(apiResponse));
         response.getWriter().flush();
     }
 }

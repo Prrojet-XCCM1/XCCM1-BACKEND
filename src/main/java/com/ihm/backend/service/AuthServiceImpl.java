@@ -36,28 +36,27 @@ public class AuthServiceImpl implements AuthService {
     @Override
     public ApiResponse<AuthenticationResponse> authenticate(AuthenticationRequest request) {
         try {
-            authenticationManager.authenticate(
-                new UsernamePasswordAuthenticationToken(
-                    request.getEmail(),
-                    request.getPassword()
-                )
-            );
+        // REMPLACER l'appel à authenticationManager par une vérification manuelle
+        User user = userRepository.findByEmail(request.getEmail())
+            .orElseThrow(() -> new UsernameNotFoundException("Utilisateur non trouvé"));
 
-            User user = userRepository.findByEmail(request.getEmail())
-                .orElseThrow(() -> new UsernameNotFoundException("Utilisateur non trouvé"));
-
-            if (!user.isEnabled()) {
-                return ApiResponse.unauthorized("Compte désactivé ou non vérifié", null);
-            }
-
-            String jwt = jwtService.generateToken(user);
-            AuthenticationResponse authResponse = AuthenticationResponse.fromUser(user, jwt);
-
-            return ApiResponse.success("Connexion réussie", authResponse);
-
-        } catch (BadCredentialsException e) {
+        // Vérifier le mot de passe
+        if (!passwordEncoder.matches(request.getPassword(), user.getPassword())) {
             return ApiResponse.unauthorized("Email ou mot de passe incorrect", null);
         }
+
+        if (!user.isEnabled()) {
+            return ApiResponse.unauthorized("Compte désactivé ou non vérifié", null);
+        }
+
+        String jwt = jwtService.generateToken(user);
+        AuthenticationResponse authResponse = AuthenticationResponse.fromUser(user, jwt);
+
+        return ApiResponse.success("Connexion réussie", authResponse);
+
+    } catch (UsernameNotFoundException e) {
+        return ApiResponse.unauthorized("Email ou mot de passe incorrect", null);
+    }
     }
 
     @Override
