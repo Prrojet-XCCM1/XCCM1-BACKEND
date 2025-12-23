@@ -1,5 +1,7 @@
 package com.ihm.backend.mappers;
 
+import java.util.Arrays;
+import java.util.List;
 import java.util.UUID;
 import org.mapstruct.BeanMapping;
 import org.mapstruct.Mapper;
@@ -20,6 +22,23 @@ public interface UserMapper {
     
     default UUID map(String string) {
         return string != null ? UUID.fromString(string) : null;
+    }
+    
+    // Conversion String <-> List<String> pour le champ subjects
+    default List<String> stringToList(String value) {
+        if (value == null || value.trim().isEmpty()) {
+            return null;
+        }
+        // Support pour format CSV: "Math,Physics,SVT"
+        return Arrays.asList(value.split(","));
+    }
+    
+    default String listToString(List<String> value) {
+        if (value == null || value.isEmpty()) {
+            return null;
+        }
+        // Convertit List<String> vers CSV: "Math,Physics,SVT"
+        return String.join(",", value);
     }
 
     UserDto toDto(User user);

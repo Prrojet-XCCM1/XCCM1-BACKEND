@@ -13,21 +13,22 @@ public interface EnrollmentRepository extends JpaRepository<Enrollment, Long> {
     
     /**
      * Trouve un enrôlement spécifique pour un cours et un utilisateur
+     * Utilise la navigation JPA: course.id et user.id
      */
-    Optional<Enrollment> findByCourseIdAndUserId(Integer courseId, UUID userId);
+    Optional<Enrollment> findByCourse_IdAndUser_Id(Integer courseId, UUID userId);
     
     /**
      * Trouve tous les enrôlements d'un utilisateur
      */
-    List<Enrollment> findByUserId(UUID userId);
+    List<Enrollment> findByUser_Id(UUID userId);
     
     /**
      * Trouve tous les enrôlements pour un cours donné
      */
-    List<Enrollment> findByCourseId(Integer courseId);
+    List<Enrollment> findByCourse_Id(Integer courseId);
     
     /**
      * Vérifie si un utilisateur est déjà enrôlé à un cours
      */
-    boolean existsByCourseIdAndUserId(Integer courseId, UUID userId);
+    boolean existsByCourse_IdAndUser_Id(Integer courseId, UUID userId);
 }

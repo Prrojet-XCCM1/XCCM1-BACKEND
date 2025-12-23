@@ -23,9 +23,38 @@ public class AuthController {
     }
 
     @PostMapping("/register")
+    @Deprecated // Garder pour compatibilité
     public ResponseEntity<ApiResponse<AuthenticationResponse>> register(
             @RequestBody RegisterRequest request) {
         return ResponseEntity.ok(authService.register(request));
+    }
+
+    /**
+     * Endpoint d'inscription pour les étudiants
+     */
+    @PostMapping("/register/student")
+    public ResponseEntity<ApiResponse<AuthenticationResponse>> registerStudent(
+            @RequestBody StudentRegisterRequest request) {
+        ApiResponse<AuthenticationResponse> response = authService.registerStudent(request);
+        
+        if (response.getStatus() == 201) {
+            return ResponseEntity.status(201).body(response);
+        }
+        return ResponseEntity.status(response.getStatus()).body(response);
+    }
+
+    /**
+     * Endpoint d'inscription pour les enseignants
+     */
+    @PostMapping("/register/teacher")
+    public ResponseEntity<ApiResponse<AuthenticationResponse>> registerTeacher(
+            @RequestBody TeacherRegisterRequest request) {
+        ApiResponse<AuthenticationResponse> response = authService.registerTeacher(request);
+        
+        if (response.getStatus() == 201) {
+            return ResponseEntity.status(201).body(response);
+        }
+        return ResponseEntity.status(response.getStatus()).body(response);
     }
 
     @PostMapping("/forgot-password")

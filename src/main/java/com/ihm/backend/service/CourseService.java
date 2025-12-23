@@ -131,7 +131,7 @@ public class CourseService {
             .map(course -> {
                 Enrollment enrollment = null;
                 if (userId != null) {
-                    enrollment = enrollmentRepository.findByCourseIdAndUserId(
+                    enrollment = enrollmentRepository.findByCourse_IdAndUser_Id(
                         course.getId(), userId
                     ).orElse(null);
                 }
@@ -149,7 +149,7 @@ public class CourseService {
         
         Enrollment enrollment = null;
         if (userId != null) {
-            enrollment = enrollmentRepository.findByCourseIdAndUserId(
+            enrollment = enrollmentRepository.findByCourse_IdAndUser_Id(
                 courseId, userId
             ).orElse(null);
         }

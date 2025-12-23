@@ -9,7 +9,7 @@ import com.ihm.backend.repository.*;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.security.authentication.*;
-import org.springframework.security.core.userdetails.*;
+import org.springframework.security.core.userdetails.UsernameNotFoundException;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -169,5 +169,99 @@ public class AuthServiceImpl implements AuthService {
         tokenRepository.save(token);
 
         return ApiResponse.success("Mot de passe réinitialisé avec succès");
+    }
+
+    /**
+     * Inscription spécifique pour les étudiants
+     */
+    @Override
+    @Transactional
+    public ApiResponse<AuthenticationResponse> registerStudent(StudentRegisterRequest request) {
+        log.info("Tentative d'inscription étudiant pour: {}", request.getEmail());
+        
+        // Validation des mots de passe
+        if (!request.getPassword().equals(request.getConfirmPassword())) {
+            return ApiResponse.badRequest("Les mots de passe ne correspondent pas", null);
+        }
+
+        // Vérification email unique
+        if (userRepository.existsByEmail(request.getEmail())) {
+            return ApiResponse.conflict("Cet email est déjà utilisé", null);
+        }
+
+        // Construction de l'utilisateur étudiant
+        User student = User.builder()
+                .email(request.getEmail())
+                .firstName(request.getFirstName())
+                .lastName(request.getLastName())
+                .role(UserRole.STUDENT)
+                .photoUrl(request.getPhotoUrl())
+                .city(request.getCity())
+                .university(request.getUniversity())
+                .specialization(request.getSpecialization())
+                .password(passwordEncoder.encode(request.getPassword()))
+                .registrationDate(LocalDateTime.now())
+                .active(true)
+                .verified(true)
+                .build();
+
+        User saved = userRepository.save(student);
+        log.info("Étudiant créé: {}", saved.getEmail());
+
+        String jwt = jwtService.generateToken(saved);
+        AuthenticationResponse response = AuthenticationResponse.fromUser(saved, jwt);
+
+        return ApiResponse.created("Inscription étudiant réussie", response);
+    }
+
+    /**
+     * Inscription spécifique pour les enseignants
+     */
+    @Override
+    @Transactional
+    public ApiResponse<AuthenticationResponse> registerTeacher(TeacherRegisterRequest request) {
+        log.info("Tentative d'inscription enseignant pour: {}", request.getEmail());
+        
+        // Validation des mots de passe
+        if (!request.getPassword().equals(request.getConfirmPassword())) {
+            return ApiResponse.badRequest("Les mots de passe ne correspondent pas", null);
+        }
+
+        // Vérification email unique
+        if (userRepository.existsByEmail(request.getEmail())) {
+            return ApiResponse.conflict("Cet email est déjà utilisé", null);
+        }
+
+        // Conversion de List<String> vers String pour subjects
+        String subjectsStr = null;
+        if (request.getSubjects() != null && !request.getSubjects().isEmpty()) {
+            subjectsStr = String.join(",", request.getSubjects());
+        }
+
+        // Construction de l'utilisateur enseignant
+        User teacher = User.builder()
+                .email(request.getEmail())
+                .firstName(request.getFirstName())
+                .lastName(request.getLastName())
+                .role(UserRole.TEACHER)
+                .photoUrl(request.getPhotoUrl())
+                .city(request.getCity())
+                .university(request.getUniversity())
+                .grade(request.getGrade())
+                .subjects(subjectsStr)
+                .certification(request.getCertification())
+                .password(passwordEncoder.encode(request.getPassword()))
+                .registrationDate(LocalDateTime.now())
+                .active(true)
+                .verified(true)
+                .build();
+
+        User saved = userRepository.save(teacher);
+        log.info("Enseignant créé: {}", saved.getEmail());
+
+        String jwt = jwtService.generateToken(saved);
+        AuthenticationResponse response = AuthenticationResponse.fromUser(saved, jwt);
+
+        return ApiResponse.created("Inscription enseignant réussie", response);
     }
 }

@@ -40,7 +40,7 @@ public class EnrollmentController {
         } catch (Exception e) {
             log.error("Erreur lors de l'enrôlement", e);
             return ResponseEntity.internalServerError()
-                    .body(ApiResponse.error("Erreur lors de l'enrôlement", null));
+                    .body(ApiResponse.internalError("Erreur lors de l'enrôlement", e.getMessage()));
         }
     }
 
@@ -57,7 +57,7 @@ public class EnrollmentController {
         } catch (Exception e) {
             log.error("Erreur lors de la récupération des enrôlements", e);
             return ResponseEntity.internalServerError()
-                    .body(ApiResponse.error("Erreur serveur", null));
+                    .body(ApiResponse.internalError("Erreur serveur", e.getMessage()));
         }
     }
 
@@ -79,7 +79,7 @@ public class EnrollmentController {
         } catch (Exception e) {
             log.error("Erreur lors de la mise à jour de la progression", e);
             return ResponseEntity.internalServerError()
-                    .body(ApiResponse.error("Erreur serveur", null));
+                    .body(ApiResponse.internalError("Erreur serveur", e.getMessage()));
         }
     }
 
@@ -97,7 +97,7 @@ public class EnrollmentController {
         } catch (Exception e) {
             log.error("Erreur lors du marquage comme complété", e);
             return ResponseEntity.internalServerError()
-                    .body(ApiResponse.error("Erreur serveur", null));
+                    .body(ApiResponse.internalError("Erreur serveur", e.getMessage()));
         }
     }
 
@@ -121,7 +121,7 @@ public class EnrollmentController {
         } catch (Exception e) {
             log.error("Erreur lors de la récupération de l'enrôlement", e);
             return ResponseEntity.internalServerError()
-                    .body(ApiResponse.error("Erreur serveur", null));
+                    .body(ApiResponse.internalError("Erreur serveur", e.getMessage()));
         }
     }
 }

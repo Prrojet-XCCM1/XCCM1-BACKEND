@@ -54,7 +54,7 @@ public class EnrollmentService {
         }
         
         // Vérifier qu'il n'y a pas de doublon
-        if (enrollmentRepository.existsByCourseIdAndUserId(courseId, userId)) {
+        if (enrollmentRepository.existsByCourse_IdAndUser_Id(courseId, userId)) {
             throw new IllegalStateException("Vous êtes déjà enrôlé à ce cours");
         }
         
@@ -120,7 +120,7 @@ public class EnrollmentService {
      * Récupère l'enrôlement d'un utilisateur pour un cours spécifique
      */
     public EnrollmentDTO getEnrollmentForUser(Integer courseId, UUID userId) {
-        return enrollmentRepository.findByCourseIdAndUserId(courseId, userId)
+        return enrollmentRepository.findByCourse_IdAndUser_Id(courseId, userId)
                 .map(EnrollmentDTO::fromEntity)
                 .orElse(null);
     }
@@ -129,7 +129,7 @@ public class EnrollmentService {
      * Récupère tous les enrôlements d'un utilisateur
      */
     public List<EnrollmentDTO> getUserEnrollments(UUID userId) {
-        return enrollmentRepository.findByUserId(userId)
+        return enrollmentRepository.findByUser_Id(userId)
                 .stream()
                 .map(EnrollmentDTO::fromEntity)
                 .collect(Collectors.toList());
