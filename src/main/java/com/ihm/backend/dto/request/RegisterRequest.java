@@ -24,39 +24,11 @@ public class RegisterRequest {
     private String city;
     private String university;
     
-    // Champs communs optionnels
-    private String phoneNumber;
-    private String bio;
-    
- 
+    // Champ spécifique aux étudiants
+    private String specialization;
     
     // Champs spécifiques aux enseignants
     private String grade;
-    private String certification;
     private List<String> subjects;
-    private List<String> teachingGrades;
-    private String teachingGoal;
-    private String department;
-    private Integer yearsOfExperience;
-    private String officeLocation;
-    private String officeHours;
-
-
-
-
-    // Student fields
-    private String promotion;
-    private String specialization;
-    private String level;
-    private String averageGrade;
-    private String currentSemester;
-    private String major;
-    private String minor;
-    private String studyField;
-    private String academicYear;
-    private List<String> interests;
-    private List<String> activities;
-    
-   
-
+    private String certification;
 }

@@ -8,7 +8,6 @@ import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
-import lombok.experimental.SuperBuilder;
 import org.springframework.security.core.GrantedAuthority;
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.security.core.userdetails.UserDetails;
@@ -19,34 +18,17 @@ import java.util.List;
 import java.util.UUID;
 
 @Data
-@SuperBuilder
+@Builder
 @NoArgsConstructor
 @AllArgsConstructor
-
 @Entity
 @Table(name = "users")
-@Inheritance(strategy = InheritanceType.SINGLE_TABLE)
-@DiscriminatorColumn(name = "type", discriminatorType = DiscriminatorType.STRING)
-@JsonTypeInfo(
-    use = JsonTypeInfo.Id.NAME,
-    property = "type"
-)
-@JsonSubTypes({
-    @JsonSubTypes.Type(value = Student.class, name = "STUDENT"),
-    @JsonSubTypes.Type(value = Teacher.class, name = "TEACHER")
-})
-public abstract class User implements UserDetails {
+public class User implements UserDetails {
 
     @Id
     @GeneratedValue
     @Column(columnDefinition = "uuid")
     private UUID id;
-
-    @Column(name = "first_name", nullable = false)
-    private String firstName;
-
-    @Column(name = "last_name", nullable = false)
-    private String lastName;
 
     @Column(nullable = false, unique = true)
     private String email;
@@ -59,6 +41,12 @@ public abstract class User implements UserDetails {
     @Column(nullable = false)
     private UserRole role;
 
+    @Column(name = "first_name", nullable = false)
+    private String firstName;
+
+    @Column(name = "last_name", nullable = false)
+    private String lastName;
+
     @Column(name = "photo_url")
     private String photoUrl;
 
@@ -66,32 +54,38 @@ public abstract class User implements UserDetails {
 
     private String university;
 
+    // Champ spécifique aux étudiants
+    private String specialization;
+
+    // Champs spécifiques aux enseignants
+    private String grade;
+
+    @Column(columnDefinition = "TEXT")
+    private String subjects;  // Stocké comme JSON array string: ["Math","Physics"]
+
+    private String certification;
+
     @Column(name = "registration_date")
     private LocalDateTime registrationDate;
 
-    @Column(name = "last_login_at")
-    private LocalDateTime lastLoginAt;
+    @Column(name = "last_login")
+    private LocalDateTime lastLogin;
 
-    @Column(name = "created_at")
-    private LocalDateTime createdAt;
-
+    // Champs internes (non exposés dans l'API)
+    @JsonIgnore
     @Builder.Default
     private boolean active = true;
 
+    @JsonIgnore
     @Builder.Default
     private boolean verified = true;
 
-    @Transient // Pas stocké en base, calculé
+    // Spring Security methods
+    @Transient
     @JsonIgnore
     @Override
     public Collection<? extends GrantedAuthority> getAuthorities() {
         return List.of(new SimpleGrantedAuthority("ROLE_" + role.name()));
-    }
-
-
-
-    public String getFullName() {
-    return (firstName != null ? firstName : "") + " " + (lastName != null ? lastName : "");
     }
 
     @Override
@@ -127,5 +121,11 @@ public abstract class User implements UserDetails {
     @JsonIgnore
     public boolean isEnabled() {
         return active && verified;
+    }
+
+    @Transient
+    @JsonIgnore
+    public String getFullName() {
+        return (firstName != null ? firstName : "") + " " + (lastName != null ? lastName : "");
     }
 }
