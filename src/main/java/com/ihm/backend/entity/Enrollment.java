@@ -1,11 +1,19 @@
 package com.ihm.backend.entity;
+
 import jakarta.persistence.*;
+import lombok.AllArgsConstructor;
+import lombok.Builder;
 import lombok.Data;
+import lombok.NoArgsConstructor;
 import org.hibernate.annotations.CreationTimestamp;
 
 import java.time.LocalDateTime;
+import java.util.UUID;
 
 @Data
+@Builder
+@NoArgsConstructor
+@AllArgsConstructor
 @Entity
 @Table(name = "enrollments")
 public class Enrollment {
@@ -15,23 +23,35 @@ public class Enrollment {
     private Long id;
 
     @ManyToOne
-    @JoinColumn(name = "etudiant_id", nullable = false)
-    private Student etudiant;
+    @JoinColumn(name = "user_id", nullable = false)
+    private User user;  // L'étudiant enrôlé (role doit être STUDENT)
 
     @ManyToOne
-    @JoinColumn(name = "cours_id", nullable = false)
-    private Course cours;
+    @JoinColumn(name = "course_id", nullable = false)
+    private Course course;  // Le cours
 
     @CreationTimestamp
-    @Column(updatable = false)
-    private LocalDateTime enrollmentDate;
+    @Column(name = "enrolled_at", updatable = false)
+    private LocalDateTime enrolledAt;
 
-    @Enumerated(EnumType.STRING)
-    private EnrollmentStatus status = EnrollmentStatus.PENDING;  // Par défaut en attente
+    @Column(name = "progress")
+    @Builder.Default
+    private Double progress = 0.0;  // Progression en % (0-100)
 
-    private double progress = 0.0;  // Progression en %
+    @Column(name = "last_accessed")
+    private LocalDateTime lastAccessed;
 
-    public enum EnrollmentStatus {
-        PENDING, ENROLLED, COMPLETED
+    @Column(name = "completed")
+    private Boolean completed;
+
+    // Méthodes utilitaires pour exposition via DTO
+    @Transient
+    public Integer getCourseId() {
+        return course != null ? course.getId() : null;
+    }
+
+    @Transient
+    public UUID getUserId() {
+        return user != null ? user.getId() : null;
     }
 }

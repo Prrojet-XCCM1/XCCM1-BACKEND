@@ -1,10 +1,10 @@
 package com.ihm.backend.service;
 
+import java.nio.file.AccessDeniedException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.List;
-import java.util.stream.Collector;
 import java.util.stream.Collectors;
 
 import org.springframework.beans.factory.annotation.Autowired;
@@ -12,13 +12,14 @@ import org.springframework.stereotype.Service;
 import org.springframework.web.multipart.MultipartFile;
 
 import com.ihm.backend.dto.response.CourseResponse;
+import com.ihm.backend.dto.response.EnrichedCourseResponse;
 import com.ihm.backend.dto.request.CourseCreateRequestdto;
 import com.ihm.backend.dto.request.CourseUpdateRequestdto;
+import com.ihm.backend.exception.ResourceNotFoundException;
 import com.ihm.backend.mappers.CourseMapper;
 import com.ihm.backend.repository.CourseRepository;
+import com.ihm.backend.repository.EnrollmentRepository;
 import com.ihm.backend.repository.UserRepository;
-
-import jakarta.mail.Multipart;
 
 import java.util.UUID;
 import com.ihm.backend.entity.*;
@@ -31,6 +32,8 @@ public class CourseService {
     private  CourseRepository courseRepository;
     @Autowired
     private UserRepository userRepository;
+    @Autowired
+    private EnrollmentRepository enrollmentRepository;
     //create a course
    public CourseResponse createCourse(CourseCreateRequestdto dto,UUID authorId) throws Exception{
     Course course=courseMapper.toEntity(dto);
@@ -106,4 +109,51 @@ public class CourseService {
 
     }
     
+    /**
+     * Valide que l'enseignant est propriétaire du cours
+     */
+    public void validateOwnership(Integer courseId, UUID teacherId) throws Exception {
+        Course course = courseRepository.findById(courseId)
+            .orElseThrow(() -> new ResourceNotFoundException("Cours non trouvé"));
+        
+        if (!course.getAuthor().getId().equals(teacherId)) {
+            throw new AccessDeniedException("Vous ne pouvez modifier que vos propres cours");
+        }
+    }
+    
+    /**
+     * Récupère tous les cours publiés enrichis avec l'enrôlement de l'utilisateur si applicable
+     */
+    public List<EnrichedCourseResponse> getEnrichedCourses(UUID userId) {
+        List<Course> publishedCourses = courseRepository.findByStatus(CourseStatus.PUBLISHED);
+        
+        return publishedCourses.stream()
+            .map(course -> {
+                Enrollment enrollment = null;
+                if (userId != null) {
+                    enrollment = enrollmentRepository.findByCourseIdAndUserId(
+                        course.getId(), userId
+                    ).orElse(null);
+                }
+                return EnrichedCourseResponse.fromCourse(course, enrollment);
+            })
+            .collect(Collectors.toList());
+    }
+    
+    /**
+     * Récupère un cours enrichi avec l'enrôlement de l'utilisateur si applicable
+     */
+    public EnrichedCourseResponse getEnrichedCourse(Integer courseId, UUID userId) throws Exception {
+        Course course = courseRepository.findById(courseId)
+            .orElseThrow(() -> new ResourceNotFoundException("Cours non trouvé"));
+        
+        Enrollment enrollment = null;
+        if (userId != null) {
+            enrollment = enrollmentRepository.findByCourseIdAndUserId(
+                courseId, userId
+            ).orElse(null);
+        }
+        
+        return EnrichedCourseResponse.fromCourse(course, enrollment);
+    }
 }

@@ -22,6 +22,7 @@ import java.util.List;
 
 @Configuration
 @EnableWebSecurity
+@EnableMethodSecurity(prePostEnabled = true)  // Active @PreAuthorize
 public class SecurityConfig {
 
     private final JwtAuthenticationFilter jwtAuthenticationFilter;
@@ -64,10 +65,7 @@ public class SecurityConfig {
                     "/actuator/health"
                 ).permitAll()
                 
-                // === OPTIONS POUR CORS ===
-                .requestMatchers("/**").permitAll() // Autoriser OPTIONS pour CORS
-                
-                // === TOUTES LES AUTRES ROUTES ===
+                // === TOUTES LES AUTRES ROUTES NÉCESSITENT AUTHENTIFICATION ===
                 .anyRequest().authenticated())
             .addFilterBefore(jwtAuthenticationFilter, 
                 UsernamePasswordAuthenticationFilter.class);
