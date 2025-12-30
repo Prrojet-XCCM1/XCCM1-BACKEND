@@ -27,9 +27,16 @@ import java.util.List;
 public class SecurityConfig {
 
     private final JwtAuthenticationFilter jwtAuthenticationFilter;
+    private final JwtAuthenticationEntryPoint jwtAuthenticationEntryPoint;
+    private final CustomAccessDeniedHandler customAccessDeniedHandler;
 
-    public SecurityConfig(JwtAuthenticationFilter jwtAuthenticationFilter) {
+    public SecurityConfig(
+            JwtAuthenticationFilter jwtAuthenticationFilter,
+            JwtAuthenticationEntryPoint jwtAuthenticationEntryPoint,
+            CustomAccessDeniedHandler customAccessDeniedHandler) {
         this.jwtAuthenticationFilter = jwtAuthenticationFilter;
+        this.jwtAuthenticationEntryPoint = jwtAuthenticationEntryPoint;
+        this.customAccessDeniedHandler = customAccessDeniedHandler;
     }
 
     @Bean
@@ -57,7 +64,7 @@ public class SecurityConfig {
                 
                 // === API AUTHENTIFICATION - ACCÈS PUBLIC ===
                 .requestMatchers(
-                    "/api/v1/auth/**", // ← Votre chemin d'API
+                    "/api/v1/auth/**",
                     "/api/auth/**",
                     "/api/public/**",
                     "/api/register",
@@ -68,6 +75,9 @@ public class SecurityConfig {
                 
                 // === TOUTES LES AUTRES ROUTES NÉCESSITENT AUTHENTIFICATION ===
                 .anyRequest().authenticated())
+            .exceptionHandling(exception -> exception
+                .authenticationEntryPoint(jwtAuthenticationEntryPoint)
+                .accessDeniedHandler(customAccessDeniedHandler))
             .addFilterBefore(jwtAuthenticationFilter, 
                 UsernamePasswordAuthenticationFilter.class);
         
@@ -114,6 +124,12 @@ public class SecurityConfig {
     @Bean
     public PasswordEncoder passwordEncoder() {
         return new BCryptPasswordEncoder();
+    }
+
+    @Bean
+    public org.springframework.security.core.userdetails.UserDetailsService userDetailsService(com.ihm.backend.repository.UserRepository repository) {
+        return username -> repository.findByEmail(username)
+                .orElseThrow(() -> new org.springframework.security.core.userdetails.UsernameNotFoundException("Utilisateur non trouvé"));
     }
 
     @Bean

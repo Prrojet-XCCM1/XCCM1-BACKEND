@@ -34,24 +34,47 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
     ) throws ServletException, IOException {
 
         final String authHeader = request.getHeader("Authorization");
+        
+        // 1. Passage direct si pas de Header Authorization ou pas Bearer
         if (authHeader == null || !authHeader.startsWith("Bearer ")) {
             filterChain.doFilter(request, response);
             return;
         }
 
-        final String jwt = authHeader.substring(7);
-        final String userEmail = jwtService.extractUsername(jwt);
-
-        if (userEmail != null && SecurityContextHolder.getContext().getAuthentication() == null) {
-            UserDetails userDetails = this.userDetailsService.loadUserByUsername(userEmail);
-
-            if (jwtService.isTokenValid(jwt, userDetails)) {
-                var authToken = new UsernamePasswordAuthenticationToken(
-                        userDetails, null, userDetails.getAuthorities());
-                authToken.setDetails(new WebAuthenticationDetailsSource().buildDetails(request));
-                SecurityContextHolder.getContext().setAuthentication(authToken);
+        try {
+            // 2. Extraction du token
+            final String jwt = authHeader.substring(7);
+            
+            // Si le token est vide après "Bearer "
+            if (jwt.isBlank()) {
+                filterChain.doFilter(request, response);
+                return;
             }
+
+            final String userEmail = jwtService.extractUsername(jwt);
+
+            // 3. Authentification si pas déjà faite
+            if (userEmail != null && SecurityContextHolder.getContext().getAuthentication() == null) {
+                UserDetails userDetails = this.userDetailsService.loadUserByUsername(userEmail);
+
+                if (jwtService.isTokenValid(jwt, userDetails)) {
+                    UsernamePasswordAuthenticationToken authToken = new UsernamePasswordAuthenticationToken(
+                            userDetails, 
+                            null, 
+                            userDetails.getAuthorities()
+                    );
+                    authToken.setDetails(new WebAuthenticationDetailsSource().buildDetails(request));
+                    SecurityContextHolder.getContext().setAuthentication(authToken);
+                }
+            }
+        } catch (Exception e) {
+            // Log de l'erreur pour le debug interne sans exposer trop de détails
+            logger.error("Erreur d'authentification JWT: " + e.getMessage());
+            // On laisse le filtre continuer ou on s'arrête ? 
+            // Si on laisse continuer, anyRequest().authenticated() renverra une 401 via l'EntryPoint
+            // C'est le comportement le plus propre pour éviter la 500
         }
+
         filterChain.doFilter(request, response);
     }
 }
