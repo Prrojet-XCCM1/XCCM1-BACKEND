@@ -7,12 +7,11 @@ import lombok.Setter;
 @Getter
 @Setter
 @NoArgsConstructor
-public class CourseCreateRequestdto {
+public class CourseCreateRequest {
   
     private String title;
     private String category;
     private String description;
     private String content;
-    
 
 }

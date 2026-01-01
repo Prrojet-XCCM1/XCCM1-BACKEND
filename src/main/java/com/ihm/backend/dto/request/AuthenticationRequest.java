@@ -1,6 +1,5 @@
 package com.ihm.backend.dto.request;
 
-import com.ihm.backend.enums.UserRole;
 
 import lombok.AllArgsConstructor;
 import lombok.Builder;
@@ -14,5 +13,4 @@ import lombok.NoArgsConstructor;
 public class AuthenticationRequest {
     private String email;
     private String password;
-    private UserRole role;
 }

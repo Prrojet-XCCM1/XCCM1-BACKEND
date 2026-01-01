@@ -3,11 +3,9 @@ package com.ihm.backend.controller;
 import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.multipart.MultipartFile;
 
-import com.ihm.backend.dto.response.CourseResponse;
 import com.ihm.backend.enums.CourseStatus;
 import com.ihm.backend.service.CourseService;
 
-import jakarta.mail.Multipart;
 
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
@@ -15,6 +13,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.web.bind.annotation.PatchMapping;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
@@ -37,7 +36,7 @@ public class CourseController {
     private CourseService courseService;
     @PreAuthorize("hasRole('TEACHER')")
     @PostMapping("/{authorId}")
-    public ResponseEntity<?> createCourse(@RequestBody CourseCreateRequestdto request,
+    public ResponseEntity<?> createCourse(@RequestBody CourseCreateRequest request,
                                            @PathVariable UUID authorId,
                                            Authentication authentication) {
         try {
@@ -111,6 +110,23 @@ public class CourseController {
             return ResponseEntity.badRequest().body(e.getMessage());
         }
     }
+
+    @PreAuthorize("hasRole('TEACHER')")
+    @PatchMapping("/{courseId}/status")
+    public ResponseEntity<?> updateCourseStatus(@PathVariable Integer courseId,
+                                                 @RequestParam CourseStatus status,
+                                                 Authentication authentication) {
+        try {
+            User currentUser = (User) authentication.getPrincipal();
+            courseService.validateOwnership(courseId, currentUser.getId());
+            
+            return ResponseEntity.status(HttpStatus.OK)
+                     .body(courseService.changeCourseStatus(status, courseId));
+
+        } catch (Exception e) {
+            return ResponseEntity.badRequest().body(e.getMessage());
+        }
+    }
      @GetMapping("/{authorId}/status/{status}")
     public ResponseEntity<?> getCoureByStatusForAuthor(@PathVariable Integer authorId,@PathVariable CourseStatus status) {
         try {
@@ -137,7 +153,7 @@ public class CourseController {
     @PreAuthorize("hasRole('TEACHER')")
     @PutMapping("/{courseId}")
     public ResponseEntity<?> updateCourse(@PathVariable Integer courseId,
-                                           @RequestBody CourseUpdateRequestdto request,
+                                           @RequestBody CourseUpdateRequest request,
                                            Authentication authentication) {
        try {
            User currentUser = (User) authentication.getPrincipal();

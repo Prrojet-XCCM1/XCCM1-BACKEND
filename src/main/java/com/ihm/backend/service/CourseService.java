@@ -13,8 +13,8 @@ import org.springframework.web.multipart.MultipartFile;
 
 import com.ihm.backend.dto.response.CourseResponse;
 import com.ihm.backend.dto.response.EnrichedCourseResponse;
-import com.ihm.backend.dto.request.CourseCreateRequestdto;
-import com.ihm.backend.dto.request.CourseUpdateRequestdto;
+import com.ihm.backend.dto.request.CourseCreateRequest;
+import com.ihm.backend.dto.request.CourseUpdateRequest;
 import com.ihm.backend.exception.ResourceNotFoundException;
 import com.ihm.backend.mappers.CourseMapper;
 import com.ihm.backend.repository.CourseRepository;
@@ -35,7 +35,7 @@ public class CourseService {
     @Autowired
     private EnrollmentRepository enrollmentRepository;
     //create a course
-   public CourseResponse createCourse(CourseCreateRequestdto dto,UUID authorId) throws Exception{
+   public CourseResponse createCourse(CourseCreateRequest dto,UUID authorId) throws Exception{
     Course course=courseMapper.toEntity(dto);
     User author=userRepository.findById(authorId).orElseThrow(()->new Exception("Teacher does not exists"));
     course.setAuthor(author);
@@ -49,11 +49,11 @@ public class CourseService {
     return courseMapper.toResponse(courseRepository.findByAuthor(author));
    }
    //update course
-   public CourseResponse updateCourse(Integer courseId,CourseUpdateRequestdto request) throws Exception{
+   public CourseResponse updateCourse(Integer courseId,CourseUpdateRequest request) throws Exception{
     Course course=courseRepository.findById(courseId)
                     .orElseThrow(()->new Exception("Course does not exist"));
 
-    courseMapper.updateEntityFromdto(request, course);
+    courseMapper.updateEntity(request, course);
     course=courseRepository.save(course);
     return courseMapper.toResponse(course);
 

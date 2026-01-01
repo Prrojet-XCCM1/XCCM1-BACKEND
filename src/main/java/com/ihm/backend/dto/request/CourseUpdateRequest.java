@@ -6,7 +6,7 @@ import lombok.Setter;
 @Getter
 @Setter
 @NoArgsConstructor
-public class CourseUpdateRequestdto {
+public class CourseUpdateRequest {
     private String title;
     private String category;
     private String description;
