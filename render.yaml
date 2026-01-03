@@ -29,13 +29,9 @@ services:
     healthCheckPath: /actuator/health
 
   # Zookeeper Service
-  - type: pvtserver
+  - type: pserv
     name: zookeeper
     runtime: docker
-    dockerContext: .
-    dockerCommand: "confluentinc/cp-zookeeper:7.5.0" # This is a conceptual shortcut
-    # In practice, Render pvtserver needs a Dockerfile or an image.
-    # For a Blueprint, we can specify the image directly if it's public.
     image:
       url: confluentinc/cp-zookeeper:7.5.0
     envVars:
@@ -45,7 +41,7 @@ services:
         value: 2000
 
   # Kafka Service
-  - type: pvtserver
+  - type: pserv
     name: kafka
     runtime: docker
     image:
