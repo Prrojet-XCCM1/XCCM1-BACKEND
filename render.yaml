@@ -32,7 +32,7 @@ services:
   - type: pserv
     name: zookeeper
     runtime: image
-    plan: starter # Private services require at least the Starter plan
+    plan: free # Private services require at least the Starter plan
     image:
       url: confluentinc/cp-zookeeper:7.5.0
     envVars:
@@ -45,7 +45,7 @@ services:
   - type: pserv
     name: kafka
     runtime: image
-    plan: starter # Private services require at least the Starter plan
+    plan: free # Private services require at least the Starter plan
     image:
       url: confluentinc/cp-kafka:7.5.0
     envVars:
