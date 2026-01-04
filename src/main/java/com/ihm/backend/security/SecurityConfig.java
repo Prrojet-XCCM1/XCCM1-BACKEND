@@ -70,7 +70,9 @@ public class SecurityConfig {
                     "/api/register",
                     "/api/login",
                     "/api/health",
-                    "/actuator/health"
+                    "/actuator/health",
+                    "/courses",
+                    "/courses/**"
                 ).permitAll()
                 
                 // === TOUTES LES AUTRES ROUTES NÉCESSITENT AUTHENTIFICATION ===
