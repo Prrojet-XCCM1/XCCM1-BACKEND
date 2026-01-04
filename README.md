@@ -43,7 +43,7 @@ C'est la méthode la plus simple, elle lance l'API, la base de données PostgreS
 
 ```bash
 # Cloner le projet
-git clone https://github.com/Delmat237/XCCM1-BACKEND.git
+git clone https://github.com/Prrojet-XCCM1/XCCM1-BACKEND.git
 cd XCCM1-BACKEND
 
 # Lancer tous les services
