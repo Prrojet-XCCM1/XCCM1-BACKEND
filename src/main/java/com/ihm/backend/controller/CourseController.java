@@ -100,7 +100,7 @@ public class CourseController {
                 courseService.getCoursesByStatusForAuthor(authorId, status)));
     }
 
-    @PreAuthorize("isAuthenticated()")
+    @PreAuthorize("permitAll()")
     @GetMapping
     public ResponseEntity<ApiResponse<List<CourseResponse>>> getAllCourses() {
         return ResponseEntity
