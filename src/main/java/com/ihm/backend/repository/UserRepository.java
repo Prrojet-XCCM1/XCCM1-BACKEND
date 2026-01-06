@@ -3,6 +3,8 @@ package com.ihm.backend.repository;
 
 import com.ihm.backend.entity.User;
 import com.ihm.backend.enums.UserRole;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.stereotype.Repository;
 
@@ -20,4 +22,9 @@ public interface UserRepository extends JpaRepository<User, UUID> {
     List<User> findAllByRole(UserRole role);
 
     List<User> findAllByActiveAndVerified(boolean active, boolean verified);
+     // Méthode pour récupérer les utilisateurs par rôle avec pagination
+    Page<User> findByRole(UserRole role, Pageable pageable);
+    
+    // Vous pouvez aussi ajouter des méthodes spécifiques si besoin
+    Optional<User> findByIdAndRole(UUID id, UserRole role);
 }

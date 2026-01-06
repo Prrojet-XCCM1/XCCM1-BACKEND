@@ -128,4 +128,9 @@ public class User implements UserDetails {
     public String getFullName() {
         return (firstName != null ? firstName : "") + " " + (lastName != null ? lastName : "");
     }
+
+    public void setUpdatedAt(LocalDateTime now) {
+        // TODO Auto-generated method stub
+        throw new UnsupportedOperationException("Unimplemented method 'setUpdatedAt'");
+    }
 }
