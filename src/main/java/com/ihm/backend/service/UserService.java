@@ -7,13 +7,14 @@ import com.ihm.backend.enums.UserRole;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 
+import java.util.List;
 import java.util.UUID;
 
 public interface UserService {
 
     User getCurrentUser(); // basé sur SecurityContext
 
-    Page<User> getAllUsers(Pageable pageable);
+    List<User> getAllUsers();
 
     User getUserById(UUID id);
 
@@ -29,7 +30,7 @@ public interface UserService {
     
     TeacherResponse getTeacherById(UUID id);
     
-    Page<StudentResponse> getAllStudents(Pageable pageable);
+    List<StudentResponse> getAllStudents();
     
-    Page<TeacherResponse> getAllTeachers(Pageable pageable);
+    List<TeacherResponse> getAllTeachers();
 }

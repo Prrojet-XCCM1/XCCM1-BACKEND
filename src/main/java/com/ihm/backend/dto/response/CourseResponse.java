@@ -25,7 +25,7 @@ public class CourseResponse {
     private User author;
     private LocalDateTime createdAt;
     private LocalDateTime publishedAt;
-    private String content;
+    private Object content;
     private String coverImage;
     
 }

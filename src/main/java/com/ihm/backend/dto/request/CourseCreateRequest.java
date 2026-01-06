@@ -12,6 +12,6 @@ public class CourseCreateRequest {
     private String title;
     private String category;
     private String description;
-    private String content;
+    private Object content;
 
 }

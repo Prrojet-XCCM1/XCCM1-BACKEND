@@ -8,8 +8,6 @@ import com.ihm.backend.exception.ResourceNotFoundException;
 import com.ihm.backend.repository.UserRepository;
 import com.ihm.backend.service.UserService;
 import lombok.RequiredArgsConstructor;
-import org.springframework.data.domain.Page;
-import org.springframework.data.domain.Pageable;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.core.userdetails.UserDetails;
@@ -20,6 +18,7 @@ import java.time.LocalDateTime;
 import java.util.Arrays;
 import java.util.List;
 import java.util.UUID;
+import java.util.stream.Collectors;
 
 @Service
 @RequiredArgsConstructor
@@ -28,6 +27,31 @@ public class UserServiceImpl implements UserService {
 
     private final UserRepository userRepository;
 
+    @Override
+    public List<User> getAllUsers() {
+        // Retourne tous les utilisateurs sans pagination
+        return userRepository.findAll();
+    }
+
+    @Override
+    public List<StudentResponse> getAllStudents() {
+        // Récupère tous les étudiants et les mappe
+        List<User> students = userRepository.findByRole(UserRole.STUDENT);
+        return students.stream()
+                .map(this::mapToStudentResponse)
+                .collect(Collectors.toList());
+    }
+
+    @Override
+    public List<TeacherResponse> getAllTeachers() {
+        // Récupère tous les enseignants et les mappe
+        List<User> teachers = userRepository.findByRole(UserRole.TEACHER);
+        return teachers.stream()
+                .map(this::mapToTeacherResponse)
+                .collect(Collectors.toList());
+    }
+
+    // Les autres méthodes restent inchangées...
     @Override
     public User getCurrentUser() {
         Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
@@ -50,11 +74,6 @@ public class UserServiceImpl implements UserService {
     }
 
     @Override
-    public Page<User> getAllUsers(Pageable pageable) {
-        return userRepository.findAll(pageable);
-    }
-
-    @Override
     public User getUserById(UUID id) {
         return userRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Utilisateur non trouvé avec l'ID: " + id));
@@ -65,7 +84,7 @@ public class UserServiceImpl implements UserService {
     public User updateUser(UUID id, User updatedUser) {
         User existingUser = getUserById(id);
         
-        // Mettre à jour seulement les champs autorisés (éviter de modifier email/role)
+        // Mettre à jour seulement les champs autorisés
         if (updatedUser.getFirstName() != null) {
             existingUser.setFirstName(updatedUser.getFirstName());
         }
@@ -99,7 +118,6 @@ public class UserServiceImpl implements UserService {
             }
         }
         
-        // Mettre à jour la date de modification
         existingUser.setUpdatedAt(LocalDateTime.now());
         
         return userRepository.save(existingUser);
@@ -145,19 +163,6 @@ public class UserServiceImpl implements UserService {
         return mapToTeacherResponse(user);
     }
 
-    @Override
-    public Page<StudentResponse> getAllStudents(Pageable pageable) {
-        Page<User> students = userRepository.findByRole(UserRole.STUDENT, pageable);
-        return students.map(this::mapToStudentResponse);
-    }
-
-    @Override
-    public Page<TeacherResponse> getAllTeachers(Pageable pageable) {
-        Page<User> teachers = userRepository.findByRole(UserRole.TEACHER, pageable);
-        return teachers.map(this::mapToTeacherResponse);
-    }
-
-    // Méthode utilitaire pour mapper User -> StudentResponse
     private StudentResponse mapToStudentResponse(User user) {
         return StudentResponse.builder()
                 .id(user.getId())
@@ -174,7 +179,6 @@ public class UserServiceImpl implements UserService {
                 .build();
     }
 
-    // Méthode utilitaire pour mapper User -> TeacherResponse
     private TeacherResponse mapToTeacherResponse(User user) {
         List<String> subjects = null;
         if (user.getSubjects() != null && !user.getSubjects().isEmpty()) {

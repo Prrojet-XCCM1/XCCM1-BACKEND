@@ -4,6 +4,7 @@ import java.time.LocalDateTime;
 
 import com.ihm.backend.enums.CourseStatus;
 
+import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.EnumType;
 import jakarta.persistence.Enumerated;
@@ -35,7 +36,8 @@ public class Course {
     private User author;
     private LocalDateTime createdAt;
     private LocalDateTime publishedAt;
-    private String content;
+    @Column(columnDefinition = "jsonb")
+    private Object content;
     private String coverImage;
 
 }
