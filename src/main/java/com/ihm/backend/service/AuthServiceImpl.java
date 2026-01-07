@@ -29,12 +29,13 @@ public class AuthServiceImpl implements AuthService {
     private final JwtService jwtService;
     private final AuthenticationManager authenticationManager;
     private final EmailService emailService;
+    private final NotificationService notificationService;
 
     @Override
     public ApiResponse<AuthenticationResponse> authenticate(AuthenticationRequest request) {
         try {
             User user = userRepository.findByEmail(request.getEmail())
-                .orElseThrow(() -> new UsernameNotFoundException("Utilisateur non trouvé"));
+                    .orElseThrow(() -> new UsernameNotFoundException("Utilisateur non trouvé"));
 
             // Vérifier le mot de passe
             if (!passwordEncoder.matches(request.getPassword(), user.getPassword())) {
@@ -63,7 +64,7 @@ public class AuthServiceImpl implements AuthService {
     @Transactional
     public ApiResponse<AuthenticationResponse> register(RegisterRequest request) {
         log.info("Tentative d'inscription pour: {}", request.getEmail());
-        
+
         // Validation des mots de passe
         if (!request.getPassword().equals(request.getConfirmPassword())) {
             return ApiResponse.badRequest("Les mots de passe ne correspondent pas", null);
@@ -86,6 +87,9 @@ public class AuthServiceImpl implements AuthService {
         // Sauvegarde
         User saved = userRepository.save(user);
         log.info("Utilisateur créé: {} avec le rôle {}", saved.getEmail(), saved.getRole());
+
+        // Envoi email de bienvenue
+        notificationService.sendWelcomeEmail(saved);
 
         // Génération token
         String jwt = jwtService.generateToken(saved);
@@ -115,7 +119,7 @@ public class AuthServiceImpl implements AuthService {
         } else if (r.getRole() == UserRole.TEACHER) {
             user.setGrade(r.getGrade());
             user.setCertification(r.getCertification());
-            
+
             // Conversion de List<String> vers String (stockage CSV ou JSON)
             if (r.getSubjects() != null && !r.getSubjects().isEmpty()) {
                 user.setSubjects(String.join(",", r.getSubjects()));
@@ -128,15 +132,15 @@ public class AuthServiceImpl implements AuthService {
     @Override
     public ApiResponse<String> requestPasswordReset(PasswordResetRequest request) {
         User user = userRepository.findByEmail(request.getEmail())
-            .orElseThrow(() -> new ResourceNotFoundException("Utilisateur non trouvé"));
+                .orElseThrow(() -> new ResourceNotFoundException("Utilisateur non trouvé"));
 
         String token = UUID.randomUUID().toString();
         PasswordResetToken resetToken = PasswordResetToken.builder()
-            .token(token)
-            .userId(user.getId())
-            .expiryDate(LocalDateTime.now().plusHours(1))
-            .used(false)
-            .build();
+                .token(token)
+                .userId(user.getId())
+                .expiryDate(LocalDateTime.now().plusHours(1))
+                .used(false)
+                .build();
 
         tokenRepository.save(resetToken);
 
@@ -149,7 +153,7 @@ public class AuthServiceImpl implements AuthService {
     @Transactional
     public ApiResponse<String> resetPassword(PasswordUpdateRequest request) {
         PasswordResetToken token = tokenRepository.findByToken(request.getToken())
-            .orElseThrow(() -> new ResourceNotFoundException("Token invalide ou expiré"));
+                .orElseThrow(() -> new ResourceNotFoundException("Token invalide ou expiré"));
 
         if (token.isExpired() || token.getUsed()) {
             return ApiResponse.badRequest("Token expiré ou déjà utilisé", null);
@@ -160,7 +164,7 @@ public class AuthServiceImpl implements AuthService {
         }
 
         User user = userRepository.findById(token.getUserId())
-            .orElseThrow(() -> new ResourceNotFoundException("Utilisateur introuvable"));
+                .orElseThrow(() -> new ResourceNotFoundException("Utilisateur introuvable"));
 
         user.setPassword(passwordEncoder.encode(request.getNewPassword()));
         userRepository.save(user);
@@ -178,7 +182,7 @@ public class AuthServiceImpl implements AuthService {
     @Transactional
     public ApiResponse<AuthenticationResponse> registerStudent(StudentRegisterRequest request) {
         log.info("Tentative d'inscription étudiant pour: {}", request.getEmail());
-        
+
         // Validation des mots de passe
         if (!request.getPassword().equals(request.getConfirmPassword())) {
             return ApiResponse.badRequest("Les mots de passe ne correspondent pas", null);
@@ -208,6 +212,9 @@ public class AuthServiceImpl implements AuthService {
         User saved = userRepository.save(student);
         log.info("Étudiant créé: {}", saved.getEmail());
 
+        // Envoi email de bienvenue
+        notificationService.sendWelcomeEmail(saved);
+
         String jwt = jwtService.generateToken(saved);
         AuthenticationResponse response = AuthenticationResponse.fromUser(saved, jwt);
 
@@ -221,7 +228,7 @@ public class AuthServiceImpl implements AuthService {
     @Transactional
     public ApiResponse<AuthenticationResponse> registerTeacher(TeacherRegisterRequest request) {
         log.info("Tentative d'inscription enseignant pour: {}", request.getEmail());
-        
+
         // Validation des mots de passe
         if (!request.getPassword().equals(request.getConfirmPassword())) {
             return ApiResponse.badRequest("Les mots de passe ne correspondent pas", null);
@@ -258,6 +265,9 @@ public class AuthServiceImpl implements AuthService {
 
         User saved = userRepository.save(teacher);
         log.info("Enseignant créé: {}", saved.getEmail());
+
+        // Envoi email de bienvenue
+        notificationService.sendWelcomeEmail(saved);
 
         String jwt = jwtService.generateToken(saved);
         AuthenticationResponse response = AuthenticationResponse.fromUser(saved, jwt);

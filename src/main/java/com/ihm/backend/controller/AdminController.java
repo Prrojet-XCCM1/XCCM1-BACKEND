@@ -1,5 +1,6 @@
 package com.ihm.backend.controller;
 
+import com.ihm.backend.dto.request.RegisterRequest;
 import com.ihm.backend.dto.request.StudentRegisterRequest;
 import com.ihm.backend.dto.request.TeacherRegisterRequest;
 import com.ihm.backend.dto.response.AdminStatisticsResponse;
@@ -43,6 +44,14 @@ public class AdminController {
     public ResponseEntity<ApiResponse<AuthenticationResponse>> createTeacher(
             @RequestBody @Valid TeacherRegisterRequest request) {
         ApiResponse<AuthenticationResponse> response = adminService.createTeacher(request);
+        return ResponseEntity.status(response.getCode()).body(response);
+    }
+
+    @Operation(summary = "Créer un administrateur (par l'admin)")
+    @PostMapping("/users/admin")
+    public ResponseEntity<ApiResponse<AuthenticationResponse>> createAdmin(
+            @RequestBody @Valid com.ihm.backend.dto.request.RegisterRequest request) {
+        ApiResponse<AuthenticationResponse> response = adminService.createAdmin(request);
         return ResponseEntity.status(response.getCode()).body(response);
     }
 }

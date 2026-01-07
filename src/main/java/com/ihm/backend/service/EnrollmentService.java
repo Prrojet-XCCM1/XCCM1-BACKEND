@@ -29,6 +29,7 @@ public class EnrollmentService {
     private final EnrollmentRepository enrollmentRepository;
     private final CourseRepository courseRepository;
     private final UserRepository userRepository;
+    private final NotificationService notificationService;
 
     /**
      * Enrôle un étudiant à un cours
@@ -69,6 +70,12 @@ public class EnrollmentService {
 
         Enrollment saved = enrollmentRepository.save(enrollment);
         log.info("Enrôlement créé avec succès: id={}", saved.getId());
+
+        // Notifier l'enseignant
+        notificationService.sendNewEnrollmentNotification(
+                course.getAuthor(),
+                user.getFullName(),
+                course.getTitle());
 
         return EnrollmentDTO.fromEntity(saved);
     }
@@ -167,6 +174,13 @@ public class EnrollmentService {
         enrollment.setStatus(newStatus);
         Enrollment saved = enrollmentRepository.save(enrollment);
         log.info("Statut de l'enrôlement {} mis à jour vers {}", enrollmentId, newStatus);
+
+        // Notifier l'étudiant si accepté
+        if (newStatus == com.ihm.backend.enums.EnrollmentStatus.APPROVED) {
+            notificationService.sendEnrollmentAcceptedEmail(
+                    enrollment.getUser(),
+                    enrollment.getCourse().getTitle());
+        }
 
         return EnrollmentDTO.fromEntity(saved);
     }

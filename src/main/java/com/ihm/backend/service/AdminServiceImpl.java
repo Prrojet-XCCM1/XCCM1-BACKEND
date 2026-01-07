@@ -1,5 +1,6 @@
 package com.ihm.backend.service;
 
+import com.ihm.backend.dto.request.RegisterRequest;
 import com.ihm.backend.dto.request.StudentRegisterRequest;
 import com.ihm.backend.dto.request.TeacherRegisterRequest;
 import com.ihm.backend.dto.response.AdminStatisticsResponse;
@@ -55,5 +56,12 @@ public class AdminServiceImpl implements AdminService {
     public ApiResponse<AuthenticationResponse> createTeacher(TeacherRegisterRequest request) {
         log.info("Admin créant un enseignant: {}", request.getEmail());
         return authService.registerTeacher(request);
+    }
+
+    @Override
+    public ApiResponse<AuthenticationResponse> createAdmin(RegisterRequest request) {
+        log.info("Admin créant un autre administrateur: {}", request.getEmail());
+        request.setRole(UserRole.ADMIN);
+        return authService.register(request);
     }
 }
