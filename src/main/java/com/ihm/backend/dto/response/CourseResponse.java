@@ -15,17 +15,17 @@ import lombok.Setter;
 
 public class CourseResponse {
 
-      private Integer id;
-    private String title;
-    private String category;
-    private String description;
-    
-    private CourseStatus status;
-   
-    private User author;
-    private LocalDateTime createdAt;
-    private LocalDateTime publishedAt;
-    private Object content;
-    private String coverImage;
-    
+  private Integer id;
+  private String title;
+  private String category;
+  private String description;
+
+  private CourseStatus status;
+
+  private AuthorDTO author;
+  private LocalDateTime createdAt;
+  private LocalDateTime publishedAt;
+  private java.util.Map<String, Object> content;
+  private String coverImage;
+
 }

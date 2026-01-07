@@ -8,10 +8,9 @@ import lombok.Setter;
 @Setter
 @NoArgsConstructor
 public class CourseCreateRequest {
-  
+
     private String title;
     private String category;
     private String description;
-    private Object content;
-
+    private java.util.Map<String, Object> content;
 }

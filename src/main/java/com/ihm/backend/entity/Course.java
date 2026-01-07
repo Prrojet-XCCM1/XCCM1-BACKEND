@@ -40,7 +40,7 @@ public class Course {
     private LocalDateTime createdAt;
     private LocalDateTime publishedAt;
     @JdbcTypeCode(SqlTypes.JSON)
-    private Object content;
+    private java.util.Map<String, Object> content;
     private String coverImage;
 
 }
