@@ -46,7 +46,7 @@ public class NotificationService {
             mailSender.send(message);
             log.info("Email envoyé avec succès à : {}", to);
 
-        } catch (MessagingException | java.io.UnsupportedEncodingException e) {
+        } catch (Exception e) {
             log.error("Échec de l'envoi d'email à {} : {}", to, e.getMessage());
             // On ne fait pas planter l'app si l'email échoue
         }

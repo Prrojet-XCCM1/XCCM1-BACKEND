@@ -21,8 +21,8 @@ public class DataInitializer implements CommandLineRunner {
 
     @Override
     public void run(String... args) {
-        if (userRepository.count() == 0) {
-            log.info("Aucun utilisateur trouvé en base. Création du compte administrateur par défaut...");
+        if (userRepository.countByRole(UserRole.ADMIN) == 0) {
+            log.info("Aucun administrateur trouvé en base. Création du compte administrateur par défaut...");
 
             User admin = User.builder()
                     .email("admin@xccm.com")
