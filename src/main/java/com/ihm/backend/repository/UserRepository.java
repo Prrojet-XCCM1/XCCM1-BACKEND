@@ -21,11 +21,13 @@ public interface UserRepository extends JpaRepository<User, UUID> {
 
     List<User> findAllByRole(UserRole role);
 
-
     List<User> findAllByActiveAndVerified(boolean active, boolean verified);
-     // Méthode pour récupérer les utilisateurs par rôle avec pagination
+
+    // Méthode pour récupérer les utilisateurs par rôle avec pagination
     List<User> findByRole(UserRole role);
-    
+
+    long countByRole(UserRole role);
+
     // Vous pouvez aussi ajouter des méthodes spécifiques si besoin
     Optional<User> findByIdAndRole(UUID id, UserRole role);
 }

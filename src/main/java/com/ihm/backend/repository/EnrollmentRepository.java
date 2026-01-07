@@ -36,4 +36,6 @@ public interface EnrollmentRepository extends JpaRepository<Enrollment, Long> {
      * Trouve les enrôlements d'un auteur filtrés par statut
      */
     List<Enrollment> findByCourse_Author_IdAndStatus(UUID authorId, com.ihm.backend.enums.EnrollmentStatus status);
+
+    long countByStatus(com.ihm.backend.enums.EnrollmentStatus status);
 }
