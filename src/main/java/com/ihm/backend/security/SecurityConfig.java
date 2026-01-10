@@ -94,7 +94,7 @@ public class SecurityConfig {
     public CorsConfigurationSource corsConfigurationSource() {
         CorsConfiguration configuration = new CorsConfiguration();
         String allowedOrigins = System.getProperty("CORS_ALLOWED_ORIGINS",
-                "http://localhost:3000,http://localhost:4200,http://localhost:8080,http://localhost:5173,http://127.0.0.1:3000,http://127.0.0.1:8080");
+                "https://frontend-xccm-12027.vercel.app,http://localhost:3000,http://localhost:4200,http://localhost:8080,http://localhost:5173,http://127.0.0.1:3000,http://127.0.0.1:8080");
         configuration.setAllowedOrigins(Arrays.asList(allowedOrigins.split(",")));
         configuration.setAllowedMethods(Arrays.asList(
                 "GET", "POST", "PUT", "DELETE", "PATCH", "OPTIONS", "HEAD"));
