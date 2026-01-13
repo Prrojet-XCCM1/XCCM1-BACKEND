@@ -26,7 +26,7 @@ public class NotificationService {
     @Value("${app.name:XCCM}")
     private String appName;
 
-    @Value("${app.frontend.url:http://localhost:4200}")
+    @Value("${app.frontend.url:https://frontend-xccm-12027.vercel.app}")
     private String frontendUrl;
 
     // ================================================================

@@ -37,7 +37,7 @@ public class SwaggerConfig {
                             .url("https://opensource.org/licenses/MIT")))
             .servers(List.of(
                     new Server()
-                            .url("http://localhost:8080")
+                            .url("http://localhost:8082")
                             .description("Serveur de Développement"),
                     new Server()
                             .url("https://xccm1-backend-0m4d.onrender.com")
