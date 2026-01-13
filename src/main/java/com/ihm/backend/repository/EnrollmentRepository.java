@@ -68,4 +68,9 @@ public interface EnrollmentRepository extends JpaRepository<Enrollment, Long> {
      */
     @Query("SELECT e.course.id, e.course.title, COUNT(e), AVG(e.progress) FROM Enrollment e GROUP BY e.course.id, e.course.title")
     List<Object[]> findEnrollmentStatsByCourse();
+    
+    /**
+     * Compte les enrollments actifs (avec accès récent)
+     */
+    long countByCourse_IdAndLastAccessedAfter(Integer courseId, LocalDateTime date);
 }

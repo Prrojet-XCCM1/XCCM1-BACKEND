@@ -16,4 +16,6 @@ public interface CourseRepository extends JpaRepository<Course, Integer> {
     List<Course> findByStatusAndAuthor(CourseStatus status, User author);
 
     long countByStatus(CourseStatus status);
+    
+    List<Course> findByAuthor_Id(java.util.UUID authorId);
 }
