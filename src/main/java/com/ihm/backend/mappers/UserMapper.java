@@ -10,6 +10,7 @@ import org.mapstruct.MappingTarget;
 import org.mapstruct.ReportingPolicy;
 
 import com.ihm.backend.dto.UserDto;
+import com.ihm.backend.dto.response.UserDetailResponse;
 import com.ihm.backend.entity.User;
 
 @Mapper(componentModel = "spring", unmappedTargetPolicy = ReportingPolicy.IGNORE)
@@ -17,13 +18,13 @@ public interface UserMapper {
 
     // Conversion UUID <-> String
     default String map(UUID uuid) {
-        return uuid != null ? uuid.toString() : null; 
+        return uuid != null ? uuid.toString() : null;
     }
-    
+
     default UUID map(String string) {
         return string != null ? UUID.fromString(string) : null;
     }
-    
+
     // Conversion String <-> List<String> pour le champ subjects
     default List<String> stringToList(String value) {
         if (value == null || value.trim().isEmpty()) {
@@ -32,7 +33,7 @@ public interface UserMapper {
         // Support pour format CSV: "Math,Physics,SVT"
         return Arrays.asList(value.split(","));
     }
-    
+
     default String listToString(List<String> value) {
         if (value == null || value.isEmpty()) {
             return null;
@@ -42,8 +43,8 @@ public interface UserMapper {
     }
 
     UserDto toDto(User user);
-    
-    User toEntity(UserDto dto); 
+
+    User toEntity(UserDto dto);
 
     @BeanMapping(ignoreByDefault = true)
     @Mapping(target = "firstName")
@@ -51,6 +52,12 @@ public interface UserMapper {
     @Mapping(target = "email")
     @Mapping(target = "role")
     @Mapping(target = "photoUrl")
-    @Mapping(source = "isActive", target = "active") 
+    @Mapping(source = "isActive", target = "active")
     void updateUserFromDto(UserDto dto, @MappingTarget User user);
+
+    /**
+     * Convertit un User en UserDetailResponse pour les vues admin
+     */
+    @Mapping(target = "subjects", expression = "java(stringToList(user.getSubjects()))")
+    UserDetailResponse toDetailResponse(User user);
 }

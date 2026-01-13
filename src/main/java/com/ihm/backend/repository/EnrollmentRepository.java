@@ -2,8 +2,10 @@ package com.ihm.backend.repository;
 
 import com.ihm.backend.entity.Enrollment;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Query;
 import org.springframework.stereotype.Repository;
 
+import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
@@ -38,4 +40,32 @@ public interface EnrollmentRepository extends JpaRepository<Enrollment, Long> {
     List<Enrollment> findByCourse_Author_IdAndStatus(UUID authorId, com.ihm.backend.enums.EnrollmentStatus status);
 
     long countByStatus(com.ihm.backend.enums.EnrollmentStatus status);
+
+    /**
+     * Compte les enrollments par cours
+     */
+    long countByCourse_Id(Integer courseId);
+
+    /**
+     * Trouve les enrollments récents (7 derniers jours)
+     */
+    long countByEnrolledAtAfter(LocalDateTime date);
+
+    /**
+     * Calcule la progression moyenne
+     */
+    @Query("SELECT AVG(e.progress) FROM Enrollment e")
+    Double calculateAverageProgress();
+
+    /**
+     * Calcule le taux de complétion
+     */
+    @Query("SELECT COUNT(e) * 100.0 / (SELECT COUNT(e2) FROM Enrollment e2) FROM Enrollment e WHERE e.completed = true")
+    Double calculateCompletionRate();
+
+    /**
+     * Trouve les enrollments groupés par cours avec statistiques
+     */
+    @Query("SELECT e.course.id, e.course.title, COUNT(e), AVG(e.progress) FROM Enrollment e GROUP BY e.course.id, e.course.title")
+    List<Object[]> findEnrollmentStatsByCourse();
 }
