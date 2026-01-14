@@ -89,6 +89,25 @@ public class UserController {
         }
     }
 
+    @Operation(summary = "Mettre à jour un utilisateur", 
+               description = "Permet de mettre à jour les informations d'un utilisateur")
+    @PutMapping("/{id}")
+    @PreAuthorize("isAuthenticated()")
+    public ResponseEntity<ApiResponse<?>> updateUser(
+            @PathVariable UUID id,
+            @RequestBody com.ihm.backend.entity.User userUpdate) {
+        
+        com.ihm.backend.entity.User updatedUser = userService.updateUser(id, userUpdate);
+        
+        if (updatedUser.getRole() == UserRole.STUDENT) {
+            return ResponseEntity.ok(ApiResponse.success("Profil étudiant mis à jour", mapToStudentResponse(updatedUser)));
+        } else if (updatedUser.getRole() == UserRole.TEACHER) {
+            return ResponseEntity.ok(ApiResponse.success("Profil enseignant mis à jour", mapToTeacherResponse(updatedUser)));
+        } else {
+            return ResponseEntity.ok(ApiResponse.success("Profil utilisateur mis à jour", updatedUser));
+        }
+    }
+
     private StudentResponse mapToStudentResponse(com.ihm.backend.entity.User user) {
         return StudentResponse.builder()
                 .id(user.getId())

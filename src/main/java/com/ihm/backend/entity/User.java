@@ -129,8 +129,6 @@ public class User implements UserDetails {
         return (firstName != null ? firstName : "") + " " + (lastName != null ? lastName : "");
     }
 
-    public void setUpdatedAt(LocalDateTime now) {
-        // TODO Auto-generated method stub
-        throw new UnsupportedOperationException("Unimplemented method 'setUpdatedAt'");
-    }
+    @Column(name = "updated_at")
+    private LocalDateTime updatedAt;
 }
