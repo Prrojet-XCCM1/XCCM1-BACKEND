@@ -73,7 +73,8 @@ public class SecurityConfig {
                                 "/api/health",
                                 "/actuator/health",
                                 "/courses",
-                                "/courses/**")
+                                "/courses/**",
+                                "/api/v1/images/**")
                         .permitAll()
 
                         // === ADMIN - ACCÈS RESTEINT ===
