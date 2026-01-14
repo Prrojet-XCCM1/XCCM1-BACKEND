@@ -26,116 +26,116 @@ import java.util.List;
 @EnableMethodSecurity(prePostEnabled = true) // Active @PreAuthorize
 public class SecurityConfig {
 
-    private final JwtAuthenticationFilter jwtAuthenticationFilter;
-    private final JwtAuthenticationEntryPoint jwtAuthenticationEntryPoint;
-    private final CustomAccessDeniedHandler customAccessDeniedHandler;
+        private final JwtAuthenticationFilter jwtAuthenticationFilter;
+        private final JwtAuthenticationEntryPoint jwtAuthenticationEntryPoint;
+        private final CustomAccessDeniedHandler customAccessDeniedHandler;
 
-    public SecurityConfig(
-            JwtAuthenticationFilter jwtAuthenticationFilter,
-            JwtAuthenticationEntryPoint jwtAuthenticationEntryPoint,
-            CustomAccessDeniedHandler customAccessDeniedHandler) {
-        this.jwtAuthenticationFilter = jwtAuthenticationFilter;
-        this.jwtAuthenticationEntryPoint = jwtAuthenticationEntryPoint;
-        this.customAccessDeniedHandler = customAccessDeniedHandler;
-    }
+        public SecurityConfig(
+                        JwtAuthenticationFilter jwtAuthenticationFilter,
+                        JwtAuthenticationEntryPoint jwtAuthenticationEntryPoint,
+                        CustomAccessDeniedHandler customAccessDeniedHandler) {
+                this.jwtAuthenticationFilter = jwtAuthenticationFilter;
+                this.jwtAuthenticationEntryPoint = jwtAuthenticationEntryPoint;
+                this.customAccessDeniedHandler = customAccessDeniedHandler;
+        }
 
-    @Bean
-    public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
-        http
-                .cors(cors -> cors.configurationSource(corsConfigurationSource()))
-                // DÉSACTIVER CSRF POUR LES APIs REST
-                .csrf(csrf -> csrf.disable()) // ← Important pour les APIs REST
-                .sessionManagement(session -> session
-                        .sessionCreationPolicy(SessionCreationPolicy.STATELESS))
-                .authorizeHttpRequests(auth -> auth
-                        // === SWAGGER/OPENAPI - ACCÈS PUBLIC ===
-                        .requestMatchers(
-                                "/",
-                                "/swagger-ui/**",
-                                "/swagger-ui.html",
-                                "/v3/api-docs/**",
-                                "/swagger-resources/**",
-                                "/webjars/**",
-                                "/api-docs/**",
-                                "/api-docs.yaml",
-                                "/favicon.ico",
-                                "/error")
-                        .permitAll()
+        @Bean
+        public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
+                http
+                                .cors(cors -> cors.configurationSource(corsConfigurationSource()))
+                                // DÉSACTIVER CSRF POUR LES APIs REST
+                                .csrf(csrf -> csrf.disable()) // ← Important pour les APIs REST
+                                .sessionManagement(session -> session
+                                                .sessionCreationPolicy(SessionCreationPolicy.STATELESS))
+                                .authorizeHttpRequests(auth -> auth
+                                                // === SWAGGER/OPENAPI - ACCÈS PUBLIC ===
+                                                .requestMatchers(
+                                                                "/",
+                                                                "/swagger-ui/**",
+                                                                "/swagger-ui.html",
+                                                                "/v3/api-docs/**",
+                                                                "/swagger-resources/**",
+                                                                "/webjars/**",
+                                                                "/api-docs/**",
+                                                                "/api-docs.yaml",
+                                                                "/favicon.ico",
+                                                                "/error")
+                                                .permitAll()
 
-                        // === API AUTHENTIFICATION - ACCÈS PUBLIC ===
-                        .requestMatchers(
-                                "/api/v1/auth/**",
-                                "/api/auth/**",
-                                "/api/v1/public/**",
-                                "/api/public/**",
-                                "/api/register",
-                                "/api/login",
-                                "/api/health",
-                                "/actuator/health",
-                                "/courses",
-                                "/courses/**",
-                                "/api/v1/images/**")
-                        .permitAll()
+                                                // === API AUTHENTIFICATION - ACCÈS PUBLIC ===
+                                                .requestMatchers(
+                                                                "/api/v1/auth/**",
+                                                                "/api/auth/**",
+                                                                "/api/v1/public/**",
+                                                                "/api/public/**",
+                                                                "/api/register",
+                                                                "/api/login",
+                                                                "/api/health",
+                                                                "/actuator/health",
+                                                                "/courses",
+                                                                "/courses/**",
+                                                                "/api/v1/images/**")
+                                                .permitAll()
 
-                        // === ADMIN - ACCÈS RESTEINT ===
-                        .requestMatchers("/api/v1/admin/**").hasRole("ADMIN")
+                                                // === ADMIN - ACCÈS RESTEINT ===
+                                                .requestMatchers("/api/v1/admin/**").hasRole("ADMIN")
 
-                        // === TOUTES LES AUTRES ROUTES NÉCESSITENT AUTHENTIFICATION ===
-                        .anyRequest().authenticated())
-                .exceptionHandling(exception -> exception
-                        .authenticationEntryPoint(jwtAuthenticationEntryPoint)
-                        .accessDeniedHandler(customAccessDeniedHandler))
-                .addFilterBefore(jwtAuthenticationFilter,
-                        UsernamePasswordAuthenticationFilter.class);
+                                                // === TOUTES LES AUTRES ROUTES NÉCESSITENT AUTHENTIFICATION ===
+                                                .anyRequest().authenticated())
+                                .exceptionHandling(exception -> exception
+                                                .authenticationEntryPoint(jwtAuthenticationEntryPoint)
+                                                .accessDeniedHandler(customAccessDeniedHandler))
+                                .addFilterBefore(jwtAuthenticationFilter,
+                                                UsernamePasswordAuthenticationFilter.class);
 
-        return http.build();
-    }
+                return http.build();
+        }
 
-    @Bean
-    public CorsConfigurationSource corsConfigurationSource() {
-        CorsConfiguration configuration = new CorsConfiguration();
-        String allowedOrigins = System.getProperty("CORS_ALLOWED_ORIGINS");
-        configuration.setAllowedOrigins(Arrays.asList(allowedOrigins.split(",")));
-        configuration.setAllowedMethods(Arrays.asList(
-                "GET", "POST", "PUT", "DELETE", "PATCH", "OPTIONS", "HEAD"));
-        configuration.setAllowedHeaders(Arrays.asList(
-                "Authorization",
-                "Content-Type",
-                "Accept",
-                "X-Requested-With",
-                "Cache-Control",
-                "Origin",
-                "Access-Control-Request-Method",
-                "Access-Control-Request-Headers"));
-        configuration.setExposedHeaders(Arrays.asList(
-                "Authorization",
-                "Content-Type",
-                "Access-Control-Allow-Origin",
-                "Access-Control-Allow-Credentials"));
-        configuration.setAllowCredentials(true);
-        configuration.setMaxAge(3600L);
+        @Bean
+        public CorsConfigurationSource corsConfigurationSource() {
+                CorsConfiguration configuration = new CorsConfiguration();
+                String allowedOrigins = System.getenv("CORS_ALLOWED_ORIGINS");
+                configuration.setAllowedOrigins(Arrays.asList(allowedOrigins.split(",")));
+                configuration.setAllowedMethods(Arrays.asList(
+                                "GET", "POST", "PUT", "DELETE", "PATCH", "OPTIONS", "HEAD"));
+                configuration.setAllowedHeaders(Arrays.asList(
+                                "Authorization",
+                                "Content-Type",
+                                "Accept",
+                                "X-Requested-With",
+                                "Cache-Control",
+                                "Origin",
+                                "Access-Control-Request-Method",
+                                "Access-Control-Request-Headers"));
+                configuration.setExposedHeaders(Arrays.asList(
+                                "Authorization",
+                                "Content-Type",
+                                "Access-Control-Allow-Origin",
+                                "Access-Control-Allow-Credentials"));
+                configuration.setAllowCredentials(true);
+                configuration.setMaxAge(3600L);
 
-        UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();
-        source.registerCorsConfiguration("/**", configuration);
-        return source;
-    }
+                UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();
+                source.registerCorsConfiguration("/**", configuration);
+                return source;
+        }
 
-    @Bean
-    public PasswordEncoder passwordEncoder() {
-        return new BCryptPasswordEncoder();
-    }
+        @Bean
+        public PasswordEncoder passwordEncoder() {
+                return new BCryptPasswordEncoder();
+        }
 
-    @Bean
-    public org.springframework.security.core.userdetails.UserDetailsService userDetailsService(
-            com.ihm.backend.repository.UserRepository repository) {
-        return username -> repository.findByEmail(username)
-                .orElseThrow(() -> new org.springframework.security.core.userdetails.UsernameNotFoundException(
-                        "Utilisateur non trouvé"));
-    }
+        @Bean
+        public org.springframework.security.core.userdetails.UserDetailsService userDetailsService(
+                        com.ihm.backend.repository.UserRepository repository) {
+                return username -> repository.findByEmail(username)
+                                .orElseThrow(() -> new org.springframework.security.core.userdetails.UsernameNotFoundException(
+                                                "Utilisateur non trouvé"));
+        }
 
-    @Bean
-    public AuthenticationManager authenticationManager(
-            AuthenticationConfiguration authenticationConfiguration) throws Exception {
-        return authenticationConfiguration.getAuthenticationManager();
-    }
+        @Bean
+        public AuthenticationManager authenticationManager(
+                        AuthenticationConfiguration authenticationConfiguration) throws Exception {
+                return authenticationConfiguration.getAuthenticationManager();
+        }
 }
