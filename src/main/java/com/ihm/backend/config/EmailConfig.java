@@ -14,12 +14,12 @@ public class EmailConfig {
         JavaMailSenderImpl mailSender = new JavaMailSenderImpl();
 
         //  Configuration pour Gmail (le plus simple)
-        mailSender.setHost(System.getProperty("MAIL_HOST", "smtp.gmail.com"));
-        mailSender.setPort(Integer.parseInt(System.getProperty("MAIL_PORT", "587")));
+        mailSender.setHost(System.getProperty("EMAIL_HOST"));
+        mailSender.setPort(Integer.parseInt(System.getProperty("EMAIL_PORT")));
 
         // ️ À REMPLACER par vos vraies credentials
-        mailSender.setUsername(System.getProperty("EMAIL_USERNAME", "fitj202@gmail.com"));
-        mailSender.setPassword(System.getProperty("EMAIL_PASSWORD", "lmrh mqqq pjej tcbe"));
+        mailSender.setUsername(System.getProperty("EMAIL_USERNAME"));
+        mailSender.setPassword(System.getProperty("EMAIL_PASSWORD"));
 
         Properties props = mailSender.getJavaMailProperties();
         props.put("mail.transport.protocol", "smtp");

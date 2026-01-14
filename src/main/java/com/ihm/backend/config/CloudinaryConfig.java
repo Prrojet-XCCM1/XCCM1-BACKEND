@@ -14,9 +14,9 @@ public class CloudinaryConfig {
 
     @Bean
     public Cloudinary cloudinary() {
-        String cloudName = System.getenv("CLOUDINARY_CLOUD_NAME");
-        String apiKey = System.getenv("CLOUDINARY_API_KEY");
-        String apiSecret = System.getenv("CLOUDINARY_API_SECRET");
+        String cloudName = System.getProperty("CLOUDINARY_CLOUD_NAME");
+        String apiKey = System.getProperty("CLOUDINARY_API_KEY");
+        String apiSecret = System.getProperty("CLOUDINARY_API_SECRET");
 
         if (cloudName == null || apiKey == null || apiSecret == null) {
             throw new IllegalStateException(
