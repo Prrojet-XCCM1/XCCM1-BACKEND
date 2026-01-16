@@ -27,5 +27,6 @@ public class CourseResponse {
   private LocalDateTime publishedAt;
   private java.util.Map<String, Object> content;
   private String coverImage;
+  private String photoUrl;
 
 }

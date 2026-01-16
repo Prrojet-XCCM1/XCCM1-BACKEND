@@ -13,4 +13,5 @@ public class CourseCreateRequest {
     private String category;
     private String description;
     private java.util.Map<String, Object> content;
+    private String photoUrl;
 }

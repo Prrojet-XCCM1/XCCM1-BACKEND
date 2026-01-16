@@ -42,5 +42,6 @@ public class Course {
     @JdbcTypeCode(SqlTypes.JSON)
     private java.util.Map<String, Object> content;
     private String coverImage;
+    private String photoUrl;
 
 }
