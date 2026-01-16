@@ -38,6 +38,9 @@ public class Exercise {
     @Column(name = "due_date")
     private LocalDateTime dueDate;
 
+    @Column(columnDefinition = "jsonb")
+    private String content;
+
     @CreationTimestamp
     @Column(name = "created_at", updatable = false)
     private LocalDateTime createdAt;

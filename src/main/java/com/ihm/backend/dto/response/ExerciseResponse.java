@@ -18,5 +18,6 @@ public class ExerciseResponse {
     private String description;
     private Double maxScore;
     private LocalDateTime dueDate;
+    private String content;
     private LocalDateTime createdAt;
 }

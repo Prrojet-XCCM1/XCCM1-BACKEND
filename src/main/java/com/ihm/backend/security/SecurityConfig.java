@@ -94,20 +94,22 @@ public class SecurityConfig {
         @Bean
         public CorsConfigurationSource corsConfigurationSource() {
                 CorsConfiguration configuration = new CorsConfiguration();
-                String allowedOrigins = System.getenv("CORS_ALLOWED_ORIGINS");
-                
-                // Add a null/empty check
-		    if (allowedOrigins == null || allowedOrigins.isEmpty()) {
-			// Fallback to local development URLs if the env var is missing
-			configuration.setAllowedOrigins(List.of("http://localhost:3000", "https://frontend-xccm-12027.vercel.app"));
-		    } else {
-			// Split and trim each origin to be safe
-			List<String> origins = Arrays.stream(allowedOrigins.split(","))
-				                     .map(String::trim)
-				                     .toList();
-			configuration.setAllowedOrigins(origins);
-		    }
-				configuration.setAllowedOrigins(Arrays.asList(allowedOrigins.split(",")));
+                String allowedOrigins = System.getProperty("CORS_ALLOWED_ORIGINS");
+                if (allowedOrigins == null) {
+                        allowedOrigins = System.getenv("CORS_ALLOWED_ORIGINS");
+                }
+
+                if (allowedOrigins == null || allowedOrigins.isEmpty()) {
+                        configuration.setAllowedOrigins(
+                                        List.of("http://localhost:3000", "https://frontend-xccm-12027.vercel.app"));
+                } else {
+                        List<String> origins = Arrays.stream(allowedOrigins.split(","))
+                                        .map(String::trim)
+                                        .filter(s -> !s.isEmpty())
+                                        .toList();
+                        configuration.setAllowedOrigins(origins);
+                }
+
                 configuration.setAllowedMethods(Arrays.asList(
                                 "GET", "POST", "PUT", "DELETE", "PATCH", "OPTIONS", "HEAD"));
                 configuration.setAllowedHeaders(Arrays.asList(

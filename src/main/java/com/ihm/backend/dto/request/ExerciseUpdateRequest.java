@@ -16,4 +16,5 @@ public class ExerciseUpdateRequest {
     private String description;
     private Double maxScore;
     private LocalDateTime dueDate;
+    private String content;
 }
