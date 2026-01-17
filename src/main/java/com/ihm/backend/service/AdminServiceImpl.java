@@ -91,6 +91,10 @@ public class AdminServiceImpl implements AdminService {
         LocalDateTime sevenDaysAgo = LocalDateTime.now().minusDays(7);
         long recentEnrollments = enrollmentRepository.countByEnrolledAtAfter(sevenDaysAgo);
 
+        long pending = enrollmentRepository.countByStatus(EnrollmentStatus.PENDING);
+        long approved = enrollmentRepository.countByStatus(EnrollmentStatus.APPROVED);
+        long rejected = enrollmentRepository.countByStatus(EnrollmentStatus.REJECTED);
+
         EnrollmentStatsResponse stats = EnrollmentStatsResponse.builder()
                 .totalEnrollments(enrollmentRepository.count())
                 .byStatus(byStatus)
@@ -98,6 +102,9 @@ public class AdminServiceImpl implements AdminService {
                 .averageProgress(avgProgress != null ? avgProgress : 0.0)
                 .completionRate(completionRate != null ? completionRate : 0.0)
                 .recentEnrollments(recentEnrollments)
+                .pendingEnrollments(pending)
+                .acceptedEnrollments(approved)
+                .rejectedEnrollments(rejected)
                 .build();
 
         return ApiResponse.success("Statistiques d'enrollment récupérées avec succès", stats);

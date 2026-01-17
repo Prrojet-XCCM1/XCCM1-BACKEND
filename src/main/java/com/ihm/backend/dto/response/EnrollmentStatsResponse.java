@@ -20,6 +20,9 @@ public class EnrollmentStatsResponse {
     private Double averageProgress;
     private Double completionRate;
     private long recentEnrollments; // 7 derniers jours
+    private long pendingEnrollments;
+    private long acceptedEnrollments;
+    private long rejectedEnrollments;
 
     @Data
     @Builder

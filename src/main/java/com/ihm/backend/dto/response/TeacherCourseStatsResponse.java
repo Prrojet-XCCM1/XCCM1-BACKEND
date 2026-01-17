@@ -19,6 +19,9 @@ public class TeacherCourseStatsResponse {
     
     // Enrollment statistics
     private long totalEnrolled;
+    private long pendingEnrollments;
+    private long acceptedEnrollments;
+    private long rejectedEnrollments;
     private long activeStudents;  // Students with recent activity
     private Double participationRate;  // Percentage of active students
     

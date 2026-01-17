@@ -41,6 +41,10 @@ public class TeacherStatsService {
 
         // Calculer les statistiques d'enrollment
         long totalEnrolled = enrollmentRepository.countByCourse_Id(courseId);
+        long pendingEnrolled = enrollmentRepository.countByCourse_IdAndStatus(courseId, com.ihm.backend.enums.EnrollmentStatus.PENDING);
+        long approvedEnrolled = enrollmentRepository.countByCourse_IdAndStatus(courseId, com.ihm.backend.enums.EnrollmentStatus.APPROVED);
+        long rejectedEnrolled = enrollmentRepository.countByCourse_IdAndStatus(courseId, com.ihm.backend.enums.EnrollmentStatus.REJECTED);
+        
         LocalDateTime sevenDaysAgo = LocalDateTime.now().minusDays(7);
         long activeStudents = enrollmentRepository.countByCourse_IdAndLastAccessedAfter(courseId, sevenDaysAgo);
         
@@ -77,6 +81,9 @@ public class TeacherStatsService {
                 .courseTitle(course.getTitle())
                 .courseCategory(course.getCategory())
                 .totalEnrolled(totalEnrolled)
+                .pendingEnrollments(pendingEnrolled)
+                .acceptedEnrollments(approvedEnrolled)
+                .rejectedEnrollments(rejectedEnrolled)
                 .activeStudents(activeStudents)
                 .participationRate(participationRate)
                 .averageProgress(averageProgress)

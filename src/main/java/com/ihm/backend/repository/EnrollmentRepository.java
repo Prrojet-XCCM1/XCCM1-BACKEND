@@ -73,4 +73,8 @@ public interface EnrollmentRepository extends JpaRepository<Enrollment, Long> {
      * Compte les enrollments actifs (avec accès récent)
      */
     long countByCourse_IdAndLastAccessedAfter(Integer courseId, LocalDateTime date);
+    /**
+     * Compte les enrollments par cours et statut
+     */
+    long countByCourse_IdAndStatus(Integer courseId, com.ihm.backend.enums.EnrollmentStatus status);
 }
