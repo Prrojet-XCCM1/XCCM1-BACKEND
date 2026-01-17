@@ -18,6 +18,6 @@ public class ExerciseResponse {
     private String description;
     private Double maxScore;
     private LocalDateTime dueDate;
-    private String content;
+    private java.util.Map<String, Object> content;
     private LocalDateTime createdAt;
 }
