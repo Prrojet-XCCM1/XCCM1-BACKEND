@@ -164,4 +164,26 @@ public class CourseController {
         EnrichedCourseResponse enrichedCourse = courseService.getEnrichedCourse(courseId, userId);
         return ResponseEntity.ok(ApiResponse.success("Cours enrichi récupéré avec succès", enrichedCourse));
     }
+
+
+    @PreAuthorize("permitAll()")
+    @PostMapping("/{courseId}/view")
+    public ResponseEntity<ApiResponse<CourseResponse>> incrementViewCount(@PathVariable Integer courseId) throws Exception {
+        return ResponseEntity.ok(ApiResponse.success("Nombre de vues incrémenté", 
+                courseService.incrementViewCount(courseId)));
+    }
+
+    @PreAuthorize("permitAll()")
+    @PostMapping("/{courseId}/like")
+    public ResponseEntity<ApiResponse<CourseResponse>> incrementLikeCount(@PathVariable Integer courseId) throws Exception {
+        return ResponseEntity.ok(ApiResponse.success("Nombre de likes incrémenté", 
+                courseService.incrementLikeCount(courseId)));
+    }
+
+    @PreAuthorize("permitAll()")
+    @PostMapping("/{courseId}/download")
+    public ResponseEntity<ApiResponse<CourseResponse>> incrementDownloadCount(@PathVariable Integer courseId) throws Exception {
+        return ResponseEntity.ok(ApiResponse.success("Nombre de téléchargements incrémenté", 
+                courseService.incrementDownloadCount(courseId)));
+    }
 }

@@ -28,5 +28,8 @@ public class CourseResponse {
   private java.util.Map<String, Object> content;
   private String coverImage;
   private String photoUrl;
+  private Long viewCount;
+  private Long likeCount;
+  private Long downloadCount;
 
 }

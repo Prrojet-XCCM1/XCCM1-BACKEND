@@ -44,4 +44,12 @@ public class Course {
     private String coverImage;
     private String photoUrl;
 
+    @Builder.Default
+    private Long viewCount = 0L;
+    
+    @Builder.Default
+    private Long likeCount = 0L;
+    
+    @Builder.Default
+    private Long downloadCount = 0L;
 }

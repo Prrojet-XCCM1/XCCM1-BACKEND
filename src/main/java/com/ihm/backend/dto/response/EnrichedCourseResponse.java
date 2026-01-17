@@ -43,6 +43,10 @@ public class EnrichedCourseResponse {
     
     private EnrollmentDTO enrollment;  // Null si l'utilisateur n'est pas enrôlé
     
+    private Long viewCount;
+    private Long likeCount;
+    private Long downloadCount;
+    
     /**
      * Crée un EnrichedCourseResponse à partir d'un cours et d'un enrôlement optionnel
      */
@@ -58,6 +62,9 @@ public class EnrichedCourseResponse {
                 .image(course.getCoverImage())
                 .author(AuthorDTO.fromUser(course.getAuthor()))
                 .enrollment(EnrollmentDTO.fromEntity(enrollment))
+                .viewCount(course.getViewCount())
+                .likeCount(course.getLikeCount())
+                .downloadCount(course.getDownloadCount())
                 .build();
     }
 }

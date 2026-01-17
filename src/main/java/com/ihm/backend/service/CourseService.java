@@ -163,4 +163,29 @@ public class CourseService {
 
         return EnrichedCourseResponse.fromCourse(course, enrollment);
     }
+
+
+    public CourseResponse incrementViewCount(Integer courseId) throws Exception {
+        Course course = courseRepository.findById(courseId)
+                .orElseThrow(() -> new ResourceNotFoundException("Cours non trouvé"));
+        course.setViewCount(course.getViewCount() + 1);
+        course = courseRepository.save(course);
+        return courseMapper.toResponse(course);
+    }
+
+    public CourseResponse incrementLikeCount(Integer courseId) throws Exception {
+        Course course = courseRepository.findById(courseId)
+                .orElseThrow(() -> new ResourceNotFoundException("Cours non trouvé"));
+        course.setLikeCount(course.getLikeCount() + 1);
+        course = courseRepository.save(course);
+        return courseMapper.toResponse(course);
+    }
+
+    public CourseResponse incrementDownloadCount(Integer courseId) throws Exception {
+        Course course = courseRepository.findById(courseId)
+                .orElseThrow(() -> new ResourceNotFoundException("Cours non trouvé"));
+        course.setDownloadCount(course.getDownloadCount() + 1);
+        course = courseRepository.save(course);
+        return courseMapper.toResponse(course);
+    }
 }
