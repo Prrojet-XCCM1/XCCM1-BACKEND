@@ -114,4 +114,30 @@ public class EnrollmentController {
         List<EnrollmentDTO> pending = enrollmentService.getPendingEnrollmentsForTeacher(teacher.getId());
         return ResponseEntity.ok(ApiResponse.success("Enrôlements en attente récupérés", pending));
     }
+
+    /**
+     * Se désenrôler d'un cours
+     */
+    @DeleteMapping("/{enrollmentId}")
+    @PreAuthorize("hasRole('STUDENT')")
+    public ResponseEntity<ApiResponse<Void>> unenroll(
+            @PathVariable Long enrollmentId,
+            Authentication authentication) throws Exception {
+        User student = (User) authentication.getPrincipal();
+        enrollmentService.unenroll(enrollmentId, student.getId());
+        return ResponseEntity.ok(ApiResponse.success("Désenrôlement réussi", null));
+    }
+
+    /**
+     * Annuler une demande d'enrôlement en attente
+     */
+    @DeleteMapping("/pending/{enrollmentId}")
+    @PreAuthorize("hasRole('STUDENT')")
+    public ResponseEntity<ApiResponse<Void>> cancelPendingEnrollment(
+            @PathVariable Long enrollmentId,
+            Authentication authentication) throws Exception {
+        User student = (User) authentication.getPrincipal();
+        enrollmentService.cancelPendingEnrollment(enrollmentId, student.getId());
+        return ResponseEntity.ok(ApiResponse.success("Demande d'enrôlement annulée", null));
+    }
 }

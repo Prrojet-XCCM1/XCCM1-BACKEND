@@ -195,4 +195,41 @@ public class EnrollmentService {
                 .map(EnrollmentDTO::fromEntity)
                 .collect(Collectors.toList());
     }
+
+    /**
+     * Désenrôle un étudiant d'un cours
+     */
+    @Transactional
+    public void unenroll(Long enrollmentId, UUID userId) throws Exception {
+        Enrollment enrollment = enrollmentRepository.findById(enrollmentId)
+                .orElseThrow(() -> new ResourceNotFoundException("Enrôlement non trouvé"));
+
+        if (!enrollment.getUser().getId().equals(userId)) {
+            throw new AccessDeniedException("Vous ne pouvez supprimer que vos propres enrôlements");
+        }
+
+        enrollmentRepository.delete(enrollment);
+        log.info("L'utilisateur {} s'est désenrôlé du cours {}", userId, enrollment.getCourse().getId());
+    }
+
+    /**
+     * Annule un enrôlement en attente
+     */
+    @Transactional
+    public void cancelPendingEnrollment(Long enrollmentId, UUID userId) throws Exception {
+        Enrollment enrollment = enrollmentRepository.findById(enrollmentId)
+                .orElseThrow(() -> new ResourceNotFoundException("Enrôlement non trouvé"));
+
+        if (!enrollment.getUser().getId().equals(userId)) {
+            throw new AccessDeniedException("Vous ne pouvez annuler que vos propres enrôlements");
+        }
+
+        if (enrollment.getStatus() != com.ihm.backend.enums.EnrollmentStatus.PENDING) {
+            throw new IllegalStateException("Seuls les enrôlements en attente peuvent être annulés");
+        }
+
+        enrollmentRepository.delete(enrollment);
+        log.info("L'utilisateur {} a annulé sa demande d'enrôlement en attente pour le cours {}", userId,
+                enrollment.getCourse().getId());
+    }
 }
