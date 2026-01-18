@@ -185,7 +185,7 @@ public class CourseController {
    
 
     @PreAuthorize("permitAll()")
-    @PostMapping("/{courseId}/like")
+    @PostMapping("/{courseId}/dislike")
     public ResponseEntity<ApiResponse<CourseResponse>> decrementLikeCount(@PathVariable Integer courseId) throws Exception {
         return ResponseEntity.ok(ApiResponse.success("Nombre de likes décrémenté", 
                 courseService.decrementLikeCount(courseId)));
