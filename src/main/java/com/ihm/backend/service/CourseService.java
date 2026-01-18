@@ -181,6 +181,15 @@ public class CourseService {
         return courseMapper.toResponse(course);
     }
 
+    public CourseResponse decrementLikeCount(Integer courseId) throws Exception {
+        Course course = courseRepository.findById(courseId)
+                .orElseThrow(() -> new ResourceNotFoundException("Cours non trouvé"));
+        course.setLikeCount(course.getLikeCount() - 1);
+        course = courseRepository.save(course);
+        return courseMapper.toResponse(course);
+    }
+
+
     public CourseResponse incrementDownloadCount(Integer courseId) throws Exception {
         Course course = courseRepository.findById(courseId)
                 .orElseThrow(() -> new ResourceNotFoundException("Cours non trouvé"));

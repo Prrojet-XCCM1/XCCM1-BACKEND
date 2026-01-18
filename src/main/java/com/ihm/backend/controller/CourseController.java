@@ -180,6 +180,17 @@ public class CourseController {
                 courseService.incrementLikeCount(courseId)));
     }
 
+
+
+   
+
+    @PreAuthorize("permitAll()")
+    @PostMapping("/{courseId}/like")
+    public ResponseEntity<ApiResponse<CourseResponse>> decrementLikeCount(@PathVariable Integer courseId) throws Exception {
+        return ResponseEntity.ok(ApiResponse.success("Nombre de likes décrémenté", 
+                courseService.decrementLikeCount(courseId)));
+    }
+
     @PreAuthorize("permitAll()")
     @PostMapping("/{courseId}/download")
     public ResponseEntity<ApiResponse<CourseResponse>> incrementDownloadCount(@PathVariable Integer courseId) throws Exception {
