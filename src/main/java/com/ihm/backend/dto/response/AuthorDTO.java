@@ -14,13 +14,17 @@ import lombok.NoArgsConstructor;
 @NoArgsConstructor
 @AllArgsConstructor
 public class AuthorDTO {
-    
-    private String name;        // fullName de l'utilisateur
-    
-    private String image;       // photoUrl
-    
+
+    private java.util.UUID id;
+
+    private String name; // fullName de l'utilisateur
+
+    private String email;
+
+    private String image; // photoUrl
+
     private String designation; // grade pour les enseignants
-    
+
     /**
      * Convertit un User (teacher) en AuthorDTO
      */
@@ -28,11 +32,13 @@ public class AuthorDTO {
         if (user == null) {
             return null;
         }
-        
+
         return AuthorDTO.builder()
-                .name(user.getFullName())
+                .id(user.getId())
+                .name(user.getFirstName() + " " + user.getLastName())
+                .email(user.getEmail())
                 .image(user.getPhotoUrl())
-                .designation(user.getGrade())  // Sera null pour les non-teachers
+                .designation(user.getGrade()) // Sera null pour les non-teachers
                 .build();
     }
 }
