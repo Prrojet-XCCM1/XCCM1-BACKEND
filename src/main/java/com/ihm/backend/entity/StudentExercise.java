@@ -40,8 +40,8 @@ public class StudentExercise {
     @Column(columnDefinition = "TEXT")
     private String feedback;
 
-    @Column(name = "submission_url")
-    private String submissionUrl;
+    @org.hibernate.annotations.JdbcTypeCode(org.hibernate.type.SqlTypes.JSON)
+    private java.util.Map<String, Object> content;
 
     // Helper method to get student ID
     @Transient

@@ -10,5 +10,5 @@ import lombok.NoArgsConstructor;
 @NoArgsConstructor
 @AllArgsConstructor
 public class StudentExerciseSubmissionRequest {
-    private String submissionUrl;
+    private java.util.Map<String, Object> content;
 }

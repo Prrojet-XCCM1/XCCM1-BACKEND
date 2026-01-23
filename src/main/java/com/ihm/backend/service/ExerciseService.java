@@ -188,7 +188,8 @@ public class ExerciseService {
             submission.setStudent(userRepository.findById(studentId).orElseThrow());
         }
 
-        submission.setSubmissionUrl(request.getSubmissionUrl());
+
+        submission.setContent(request.getContent());
         submission.setSubmittedAt(LocalDateTime.now());
         // Reset score if re-submitted? Maybe not.
 

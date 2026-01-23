@@ -21,6 +21,6 @@ public class StudentExerciseResponse {
     private Double score;
     private Double maxScore;
     private String feedback;
-    private String submissionUrl;
+    private java.util.Map<String, Object> content;
     private LocalDateTime submittedAt;
 }
