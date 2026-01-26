@@ -188,7 +188,6 @@ public class ExerciseService {
             submission.setStudent(userRepository.findById(studentId).orElseThrow());
         }
 
-
         submission.setContent(request.getContent());
         submission.setSubmittedAt(LocalDateTime.now());
         // Reset score if re-submitted? Maybe not.
@@ -203,5 +202,18 @@ public class ExerciseService {
                 .map(studentExerciseMapper::toResponse)
                 .collect(Collectors.toList());
         return ApiResponse.success("Mes soumissions", submissions);
+    }
+
+    @Transactional
+    public ApiResponse<Void> deleteSubmission(Long submissionId, UUID teacherId) {
+        StudentExercise submission = studentExerciseRepository.findById(submissionId)
+                .orElseThrow(() -> new ResourceNotFoundException("Soumission non trouvée"));
+
+        if (!submission.getExercise().getCourse().getAuthor().getId().equals(teacherId)) {
+            throw new AccessDeniedException("Vous n'avez pas les droits pour supprimer cette soumission");
+        }
+
+        studentExerciseRepository.delete(submission);
+        return ApiResponse.success("Soumission supprimée avec succès");
     }
 }

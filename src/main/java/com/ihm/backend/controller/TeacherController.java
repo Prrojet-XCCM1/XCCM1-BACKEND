@@ -84,4 +84,12 @@ public class TeacherController {
             @AuthenticationPrincipal User teacher) {
         return ResponseEntity.ok(exerciseService.gradeSubmission(submissionId, teacher.getId(), request));
     }
+
+    @Operation(summary = "Supprimer une soumission")
+    @DeleteMapping("/submissions/{submissionId}")
+    public ResponseEntity<ApiResponse<Void>> deleteSubmission(
+            @PathVariable Long submissionId,
+            @AuthenticationPrincipal User teacher) {
+        return ResponseEntity.ok(exerciseService.deleteSubmission(submissionId, teacher.getId()));
+    }
 }
