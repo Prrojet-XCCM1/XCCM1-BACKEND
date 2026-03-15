@@ -48,6 +48,7 @@ public class CourseService {
     }
     // get all courses for a particular author
 
+    @Transactional(readOnly = true)
     public List<CourseResponse> getAllCoursesForTeacher(UUID authorId) throws Exception {
         User author = userRepository.findById(authorId).orElseThrow(() -> new Exception("Teacher does not exists"));
         return courseMapper.toResponse(courseRepository.findByAuthor(author));
