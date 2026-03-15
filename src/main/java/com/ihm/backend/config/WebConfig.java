@@ -16,21 +16,19 @@ public class WebConfig implements WebMvcConfigurer {
 
     @Override
     public void addCorsMappings(CorsRegistry registry) {
-        // Autoriser TOUTES les origines
-        registry.addMapping("/**")  // Appliquer à tous les endpoints
-                .allowedOrigins("*")  // Permettre toutes les origines
-                .allowedMethods("GET", "POST", "PUT", "DELETE", "PATCH", "OPTIONS")
-                .allowedHeaders("*")
-                .maxAge(3600); // Cache pendant 1 heure
+        // Autoriser des origines spécifiques pour plus de sécurité (compatible avec les credentials)
+        String[] allowedOrigins = {
+            "http://localhost:3000", 
+            "http://192.168.1.177:3000", 
+            "http://192.168.1.135:3000",
+            "https://frontend-xccm-12027.vercel.app"
+        };
         
-        // OU version plus restrictive mais toujours ouverte :
-        /*
-        registry.addMapping("/**")
-                .allowedOriginPatterns("*") // Utiliser allowedOriginPatterns pour plus de flexibilité
-                .allowedMethods("*")
+        registry.addMapping("/**")  // Appliquer à tous les endpoints
+                .allowedOrigins(allowedOrigins) // Utiliser allowedOrigins explicites
+                .allowedMethods("GET", "POST", "PUT", "DELETE", "PATCH", "OPTIONS", "HEAD")
                 .allowedHeaders("*")
-                .allowCredentials(false) // Doit être false quand allowedOrigins("*")
-                .maxAge(3600);
-        */
+                .allowCredentials(true)
+                .maxAge(3600); // Cache pendant 1 heure
     }
 }
