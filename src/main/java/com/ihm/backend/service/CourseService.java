@@ -157,6 +157,7 @@ public class CourseService {
     /**
      * Récupère un cours enrichi avec l'enrôlement de l'utilisateur si applicable
      */
+    @Transactional(readOnly = true)
     public EnrichedCourseResponse getEnrichedCourse(Integer courseId, UUID userId) throws Exception {
         Course course = courseRepository.findById(courseId)
                 .orElseThrow(() -> new ResourceNotFoundException("Cours non trouvé"));
