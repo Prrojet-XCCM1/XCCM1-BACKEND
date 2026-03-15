@@ -9,6 +9,7 @@ import java.util.stream.Collectors;
 
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.multipart.MultipartFile;
 
 import com.ihm.backend.dto.response.CourseResponse;
@@ -20,6 +21,8 @@ import com.ihm.backend.mappers.CourseMapper;
 import com.ihm.backend.repository.CourseRepository;
 import com.ihm.backend.repository.EnrollmentRepository;
 import com.ihm.backend.repository.UserRepository;
+
+
 
 import java.util.UUID;
 import com.ihm.backend.entity.*;
@@ -135,6 +138,7 @@ public class CourseService {
      * Récupère tous les cours publiés enrichis avec l'enrôlement de l'utilisateur
      * si applicable
      */
+    @Transactional(readOnly = true)
     public List<EnrichedCourseResponse> getEnrichedCourses(UUID userId) {
         List<Course> publishedCourses = courseRepository.findByStatus(CourseStatus.PUBLISHED);
 
