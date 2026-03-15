@@ -90,6 +90,7 @@ public class CourseClassService {
      * Récupère une classe par ID
      * Enrichit avec l'inscription de l'utilisateur courant si fourni
      */
+    @Transactional(readOnly = true)
     public CourseClassResponse getClassById(Long classId, UUID userId) {
         CourseClass entity = classRepository.findById(classId)
                 .orElseThrow(() -> new ResourceNotFoundException("Classe non trouvée: " + classId));
