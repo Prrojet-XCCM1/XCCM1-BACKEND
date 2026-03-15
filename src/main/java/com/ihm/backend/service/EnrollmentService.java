@@ -32,18 +32,20 @@ public class EnrollmentService {
     private final NotificationService notificationService;
 
     /**
-     * Enrôle un étudiant à un cours
+     * Enrôle un utilisateur (étudiant ou enseignant) à un cours.
+     * Les enseignants sont automatiquement approuvés.
+     * Un enseignant ne peut pas s'enrôler à son propre cours.
      */
     @Transactional
-    public EnrollmentDTO enrollStudent(Integer courseId, UUID userId) throws Exception {
+    public EnrollmentDTO enrollUser(Integer courseId, UUID userId) throws Exception {
         log.info("Tentative d'enrôlement: userId={}, courseId={}", userId, courseId);
 
-        // Vérifier que l'utilisateur existe et est un étudiant
+        // Vérifier que l'utilisateur existe et a un rôle autorisé
         User user = userRepository.findById(userId)
                 .orElseThrow(() -> new ResourceNotFoundException("Utilisateur non trouvé"));
 
-        if (user.getRole() != UserRole.STUDENT) {
-            throw new AccessDeniedException("Seuls les étudiants peuvent s'enrôler à des cours");
+        if (user.getRole() != UserRole.STUDENT && user.getRole() != UserRole.TEACHER) {
+            throw new AccessDeniedException("Seuls les étudiants et les enseignants peuvent s'enrôler à des cours");
         }
 
         // Vérifier que le cours existe et est publié
@@ -54,10 +56,22 @@ public class EnrollmentService {
             throw new IllegalStateException("Ce cours n'est pas encore publié");
         }
 
+        // Un enseignant ne peut pas s'enrôler à son propre cours
+        if (user.getRole() == UserRole.TEACHER && course.getAuthor() != null
+                && course.getAuthor().getId().equals(userId)) {
+            throw new AccessDeniedException("Un enseignant ne peut pas s'enrôler à son propre cours");
+        }
+
         // Vérifier qu'il n'y a pas de doublon
         if (enrollmentRepository.existsByCourse_IdAndUser_Id(courseId, userId)) {
             throw new IllegalStateException("Vous êtes déjà enrôlé à ce cours");
         }
+
+        // Les enseignants sont automatiquement approuvés ; les étudiants restent PENDING
+        com.ihm.backend.enums.EnrollmentStatus initialStatus =
+                user.getRole() == UserRole.TEACHER
+                        ? com.ihm.backend.enums.EnrollmentStatus.APPROVED
+                        : com.ihm.backend.enums.EnrollmentStatus.PENDING;
 
         // Créer l'enrôlement
         Enrollment enrollment = Enrollment.builder()
@@ -65,19 +79,30 @@ public class EnrollmentService {
                 .course(course)
                 .progress(0.0)
                 .completed(false)
-                .status(com.ihm.backend.enums.EnrollmentStatus.PENDING) // Toujours PENDING au début
+                .status(initialStatus)
                 .build();
 
         Enrollment saved = enrollmentRepository.save(enrollment);
-        log.info("Enrôlement créé avec succès: id={}", saved.getId());
+        log.info("Enrôlement créé avec succès: id={}, statut={}", saved.getId(), initialStatus);
 
-        // Notifier l'enseignant
-        notificationService.sendNewEnrollmentNotification(
-                course.getAuthor(),
-                user.getFullName(),
-                course.getTitle());
+        // Notifier l'auteur du cours (seulement si c'est un étudiant qui s'enrôle)
+        if (user.getRole() == UserRole.STUDENT) {
+            notificationService.sendNewEnrollmentNotification(
+                    course.getAuthor(),
+                    user.getFullName(),
+                    course.getTitle());
+        }
 
         return EnrollmentDTO.fromEntity(saved);
+    }
+
+    /**
+     * @deprecated Utilisez {@link #enrollUser(Integer, UUID)} à la place.
+     */
+    @Deprecated
+    @Transactional
+    public EnrollmentDTO enrollStudent(Integer courseId, UUID userId) throws Exception {
+        return enrollUser(courseId, userId);
     }
 
     /**

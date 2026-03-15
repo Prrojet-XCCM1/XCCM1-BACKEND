@@ -8,9 +8,11 @@ import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.EnumType;
 import jakarta.persistence.Enumerated;
+import jakarta.persistence.FetchType;
 import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
+import jakarta.persistence.JoinColumn;
 import jakarta.persistence.ManyToOne;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
@@ -37,6 +39,15 @@ public class Course {
     private CourseStatus status;
     @ManyToOne
     private User author;
+
+    /**
+     * Classe (salle) à laquelle ce cours appartient. Optionnel.
+     * Un cours peut être standalone ou rattaché à une classe thématique.
+     */
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "class_id", nullable = true)
+    private CourseClass courseClass;
+
     private LocalDateTime createdAt;
     private LocalDateTime publishedAt;
     @JdbcTypeCode(SqlTypes.JSON)
