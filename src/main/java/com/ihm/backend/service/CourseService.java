@@ -66,6 +66,7 @@ public class CourseService {
     }
 
     // get all courses
+    @Transactional(readOnly = true)
     public List<CourseResponse> getAllCourses() {
         return courseMapper.toResponse(courseRepository.findByStatus(CourseStatus.PUBLISHED));
     }
