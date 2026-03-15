@@ -94,6 +94,8 @@ public class SecurityConfig {
         @Bean
         public CorsConfigurationSource corsConfigurationSource() {
                 CorsConfiguration configuration = new CorsConfiguration();
+                
+                // On privilégie les variables d'environnement, sinon on utilise les valeurs par défaut
                 String allowedOrigins = System.getProperty("CORS_ALLOWED_ORIGINS");
                 if (allowedOrigins == null) {
                         allowedOrigins = System.getenv("CORS_ALLOWED_ORIGINS");
@@ -101,7 +103,7 @@ public class SecurityConfig {
 
                 if (allowedOrigins == null || allowedOrigins.isEmpty()) {
                         configuration.setAllowedOrigins(
-                                        List.of("http://localhost:3000", "https://frontend-xccm-12027.vercel.app"));
+                                        List.of("http://localhost:3000", "http://192.168.1.177:3000", "http://192.168.1.135:3000", "https://frontend-xccm-12027.vercel.app"));
                 } else {
                         List<String> origins = Arrays.stream(allowedOrigins.split(","))
                                         .map(String::trim)
@@ -109,7 +111,7 @@ public class SecurityConfig {
                                         .toList();
                         configuration.setAllowedOrigins(origins);
                 }
-
+                
                 configuration.setAllowedMethods(Arrays.asList(
                                 "GET", "POST", "PUT", "DELETE", "PATCH", "OPTIONS", "HEAD"));
                 configuration.setAllowedHeaders(Arrays.asList(
