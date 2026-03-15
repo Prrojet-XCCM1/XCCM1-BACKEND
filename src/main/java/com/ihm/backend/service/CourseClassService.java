@@ -68,6 +68,7 @@ public class CourseClassService {
     /**
      * Récupère les classes d'un enseignant
      */
+    @Transactional(readOnly = true)
     public List<CourseClassResponse> getMyClasses(UUID teacherId) {
         return classRepository.findByTeacher_Id(teacherId).stream()
                 .map(c -> buildResponse(c, null))
