@@ -79,6 +79,7 @@ public class CourseClassService {
      * Récupère toutes les classes OPEN (pour les étudiants qui veulent s'inscrire)
      * Enrichit avec l'inscription de l'étudiant courant si fourni
      */
+    @Transactional(readOnly = true)
     public List<CourseClassResponse> getAllOpenClasses(UUID studentId) {
         return classRepository.findByStatus(ClassStatus.OPEN).stream()
                 .map(c -> buildEnrichedResponse(c, studentId))
