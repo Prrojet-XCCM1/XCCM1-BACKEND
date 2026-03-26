@@ -12,7 +12,7 @@ import com.ihm.backend.dto.response.AuthorDTO;
 import com.ihm.backend.dto.response.CourseResponse;
 import com.ihm.backend.entity.Course;
 
-@Mapper(componentModel = "spring", uses = { AuthorDTO.class })
+@Mapper(componentModel = "spring")
 public interface CourseMapper {
     @Mapping(target = "id", ignore = true)
     @Mapping(target = "status", constant = "DRAFT")
@@ -34,4 +34,12 @@ public interface CourseMapper {
     @Mapping(target = "courseClass", ignore = true)
     @Mapping(target = "createdAt", ignore = true)
     void updateEntity(CourseUpdateRequest dto, @MappingTarget Course entity);
+
+    default String mapMapToString(java.util.Map<String, Object> content) {
+        return com.ihm.backend.utils.JsonUtils.toJson(content);
+    }
+
+    default java.util.Map<String, Object> mapStringToMap(String content) {
+        return com.ihm.backend.utils.JsonUtils.toMap(content);
+    }
 }

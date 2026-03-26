@@ -14,4 +14,12 @@ public interface StudentExerciseMapper {
     @Mapping(target = "studentName", expression = "java(studentExercise.getStudent().getFirstName() + \" \" + studentExercise.getStudent().getLastName())")
     @Mapping(target = "maxScore", source = "exercise.maxScore")
     StudentExerciseResponse toResponse(StudentExercise studentExercise);
+
+    default java.util.Map<String, Object> mapStringToMap(String content) {
+        return com.ihm.backend.utils.JsonUtils.toMap(content);
+    }
+
+    default String mapMapToString(java.util.Map<String, Object> content) {
+        return com.ihm.backend.utils.JsonUtils.toJson(content);
+    }
 }

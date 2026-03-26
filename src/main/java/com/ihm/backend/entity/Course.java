@@ -50,8 +50,8 @@ public class Course {
 
     private LocalDateTime createdAt;
     private LocalDateTime publishedAt;
-    @JdbcTypeCode(SqlTypes.JSON)
-    private java.util.Map<String, Object> content;
+    @Column(columnDefinition = "TEXT")
+    private String content;
     private String coverImage;
     private String photoUrl;
 

@@ -12,7 +12,6 @@ import org.mapstruct.NullValuePropertyMappingStrategy;
 @Mapper(componentModel = "spring", nullValuePropertyMappingStrategy = NullValuePropertyMappingStrategy.IGNORE)
 public interface ExerciseMapper {
 
-    @Mapping(target = "id", ignore = true)
     @Mapping(target = "course", ignore = true)
     @Mapping(target = "createdAt", ignore = true)
     Exercise toEntity(ExerciseCreateRequest request);
@@ -24,4 +23,12 @@ public interface ExerciseMapper {
     @Mapping(target = "course", ignore = true)
     @Mapping(target = "createdAt", ignore = true)
     void updateEntityFromRequest(ExerciseUpdateRequest request, @MappingTarget Exercise exercise);
+
+    default String mapMapToString(java.util.Map<String, Object> content) {
+        return com.ihm.backend.utils.JsonUtils.toJson(content);
+    }
+
+    default java.util.Map<String, Object> mapStringToMap(String content) {
+        return com.ihm.backend.utils.JsonUtils.toMap(content);
+    }
 }
