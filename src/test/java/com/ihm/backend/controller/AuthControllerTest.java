@@ -4,80 +4,139 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.ihm.backend.dto.request.*;
 import com.ihm.backend.dto.response.ApiResponse;
 import com.ihm.backend.dto.response.AuthenticationResponse;
+import com.ihm.backend.exception.GlobalExceptionHandler;
+import com.ihm.backend.security.CustomAccessDeniedHandler;
+import com.ihm.backend.security.JwtAuthenticationEntryPoint;
+import com.ihm.backend.security.JwtAuthenticationFilter;
 import com.ihm.backend.service.AuthService;
-import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
+import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
-import org.junit.jupiter.api.extension.ExtendWith;
-import org.mockito.InjectMocks;
-import org.mockito.Mock;
-import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
+import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
+import org.springframework.boot.test.mock.mockito.MockBean;
+import org.springframework.context.annotation.Import;
 import org.springframework.http.MediaType;
 import org.springframework.test.web.servlet.MockMvc;
-import org.springframework.test.web.servlet.setup.MockMvcBuilders;
 
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.when;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
+import static org.springframework.test.web.servlet.result.MockMvcResultHandlers.print;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
-@ExtendWith(MockitoExtension.class)
+@WebMvcTest(AuthController.class)
+@Import(GlobalExceptionHandler.class)
+@AutoConfigureMockMvc(addFilters = false)
 class AuthControllerTest {
 
-    @Mock
+    @Autowired
+    private MockMvc mockMvc;
+
+    @MockBean
     private AuthService authService;
 
-    @InjectMocks
-    private AuthController authController;
+    @MockBean
+    private JwtAuthenticationFilter jwtAuthenticationFilter;
+    @MockBean
+    private JwtAuthenticationEntryPoint jwtAuthenticationEntryPoint;
+    @MockBean
+    private CustomAccessDeniedHandler customAccessDeniedHandler;
 
-    private MockMvc mockMvc;
-    private final ObjectMapper objectMapper = new ObjectMapper().findAndRegisterModules();
+    @Autowired
+    private ObjectMapper objectMapper;
 
-    @BeforeEach
-    void setUp() {
-        mockMvc = MockMvcBuilders.standaloneSetup(authController).build();
+    @Nested
+    @DisplayName("Authentification")
+    class Authentication {
+        @Test
+        @DisplayName("POST /api/v1/auth/login - Succès")
+        void login_success() throws Exception {
+            AuthenticationRequest req = new AuthenticationRequest("test@test.com", "password");
+            AuthenticationResponse res = AuthenticationResponse.builder().token("jwt-token").build();
+            when(authService.authenticate(any())).thenReturn(ApiResponse.success("Succès", res));
+
+            mockMvc.perform(post("/api/v1/auth/login")
+                            .contentType(MediaType.APPLICATION_JSON)
+                            .content(objectMapper.writeValueAsString(req)))
+                    .andDo(print())
+                    .andExpect(status().isOk())
+                    .andExpect(jsonPath("$.data.token").value("jwt-token"));
+        }
+
+        @Test
+        @DisplayName("POST /api/v1/auth/login - Identifiants invalides (401)")
+        void login_unauthorized() throws Exception {
+            AuthenticationRequest req = new AuthenticationRequest("wrong@test.com", "wrong");
+            // Simuler un comportement d'échec retourné par le service (ou via une exception)
+            when(authService.authenticate(any())).thenReturn(ApiResponse.unauthorized("Identifiants invalides", "Bad credentials"));
+
+            mockMvc.perform(post("/api/v1/auth/login")
+                            .contentType(MediaType.APPLICATION_JSON)
+                            .content(objectMapper.writeValueAsString(req)))
+                    .andDo(print())
+                    .andExpect(status().isUnauthorized())
+                    .andExpect(jsonPath("$.success").value(false));
+        }
     }
 
-    @Test
-    @DisplayName("POST /api/v1/auth/login - Login success")
-    void login_success() throws Exception {
-        AuthenticationRequest req = new AuthenticationRequest("test@test.com", "password");
-        AuthenticationResponse res = AuthenticationResponse.builder().token("jwt").build();
-        when(authService.authenticate(any())).thenReturn(ApiResponse.success("success", res));
+    @Nested
+    @DisplayName("Inscription")
+    class Registration {
+        @Test
+        @DisplayName("POST /api/v1/auth/register/student - Succès")
+        void registerStudent_success() throws Exception {
+            StudentRegisterRequest req = new StudentRegisterRequest();
+            req.setEmail("new@student.com");
+            req.setPassword("password123");
+            req.setFirstName("Student");
+            req.setLastName("Test");
+            
+            AuthenticationResponse res = AuthenticationResponse.builder().token("jwt-token").build();
+            when(authService.registerStudent(any())).thenReturn(ApiResponse.created("Succès", res));
 
-        mockMvc.perform(post("/api/v1/auth/login")
-                        .contentType(MediaType.APPLICATION_JSON)
-                        .content(objectMapper.writeValueAsString(req)))
-                .andExpect(status().isOk())
-                .andExpect(jsonPath("$.data.token").value("jwt"));
+            mockMvc.perform(post("/api/v1/auth/register/student")
+                            .contentType(MediaType.APPLICATION_JSON)
+                            .content(objectMapper.writeValueAsString(req)))
+                    .andDo(print())
+                    .andExpect(status().isCreated())
+                    .andExpect(jsonPath("$.data.token").value("jwt-token"));
+        }
+
+        @Test
+        @DisplayName("POST /api/v1/auth/register/student - Email déjà utilisé (400)")
+        void registerStudent_conflict() throws Exception {
+            StudentRegisterRequest req = new StudentRegisterRequest();
+            req.setEmail("exists@test.com");
+
+            when(authService.registerStudent(any())).thenReturn(ApiResponse.badRequest("Email déjà utilisé", null));
+
+            mockMvc.perform(post("/api/v1/auth/register/student")
+                            .contentType(MediaType.APPLICATION_JSON)
+                            .content(objectMapper.writeValueAsString(req)))
+                    .andDo(print())
+                    .andExpect(status().isBadRequest())
+                    .andExpect(jsonPath("$.success").value(false));
+        }
     }
 
-    @Test
-    @DisplayName("POST /api/v1/auth/register/student - Register student success")
-    void registerStudent_success() throws Exception {
-        StudentRegisterRequest req = new StudentRegisterRequest();
-        req.setEmail("new@student.com");
-        AuthenticationResponse res = AuthenticationResponse.builder().token("jwt").build();
-        when(authService.registerStudent(any())).thenReturn(ApiResponse.created("success", res));
+    @Nested
+    @DisplayName("Mot de passe oublié")
+    class PasswordReset {
+        @Test
+        @DisplayName("POST /api/v1/auth/forgot-password - Succès")
+        void forgotPassword_success() throws Exception {
+            PasswordResetRequest req = new PasswordResetRequest("test@test.com");
+            when(authService.requestPasswordReset(any())).thenReturn(ApiResponse.success("Email envoyé"));
 
-        mockMvc.perform(post("/api/v1/auth/register/student")
-                        .contentType(MediaType.APPLICATION_JSON)
-                        .content(objectMapper.writeValueAsString(req)))
-                .andExpect(status().isCreated())
-                .andExpect(jsonPath("$.data.token").value("jwt"));
-    }
-
-    @Test
-    @DisplayName("POST /api/v1/auth/forgot-password - Forgot password success")
-    void forgotPassword_success() throws Exception {
-        PasswordResetRequest req = new PasswordResetRequest("test@test.com");
-        when(authService.requestPasswordReset(any())).thenReturn(ApiResponse.success("Email sent"));
-
-        mockMvc.perform(post("/api/v1/auth/forgot-password")
-                        .contentType(MediaType.APPLICATION_JSON)
-                        .content(objectMapper.writeValueAsString(req)))
-                .andExpect(status().isOk())
-                .andExpect(jsonPath("$.message").value("Email sent"));
+            mockMvc.perform(post("/api/v1/auth/forgot-password")
+                            .contentType(MediaType.APPLICATION_JSON)
+                            .content(objectMapper.writeValueAsString(req)))
+                    .andDo(print())
+                    .andExpect(status().isOk())
+                    .andExpect(jsonPath("$.message").value("Email envoyé"));
+        }
     }
 }

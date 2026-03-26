@@ -2,6 +2,7 @@ package com.ihm.backend.controller;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.ihm.backend.dto.request.ExerciseCreateRequest;
+import com.ihm.backend.dto.request.ExerciseUpdateRequest;
 import com.ihm.backend.dto.request.GradeSubmissionRequest;
 import com.ihm.backend.dto.response.ApiResponse;
 import com.ihm.backend.dto.response.ExerciseResponse;
@@ -9,29 +10,26 @@ import com.ihm.backend.dto.response.StudentExerciseResponse;
 import com.ihm.backend.dto.response.TeacherCourseStatsResponse;
 import com.ihm.backend.entity.User;
 import com.ihm.backend.enums.UserRole;
+import com.ihm.backend.exception.GlobalExceptionHandler;
+import com.ihm.backend.exception.ResourceNotFoundException;
+import com.ihm.backend.security.CustomAccessDeniedHandler;
+import com.ihm.backend.security.JwtAuthenticationEntryPoint;
+import com.ihm.backend.security.JwtAuthenticationFilter;
 import com.ihm.backend.service.ExerciseService;
 import com.ihm.backend.service.TeacherStatsService;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
-import org.junit.jupiter.api.extension.ExtendWith;
-import org.mockito.InjectMocks;
-import org.mockito.Mock;
-import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
+import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
+import org.springframework.boot.test.mock.mockito.MockBean;
+import org.springframework.context.annotation.Import;
 import org.springframework.http.MediaType;
-import org.springframework.mock.web.MockHttpServletRequest;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
-import org.springframework.security.core.authority.SimpleGrantedAuthority;
-import org.springframework.core.MethodParameter;
-import org.springframework.security.core.annotation.AuthenticationPrincipal;
+import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.test.web.servlet.MockMvc;
-import org.springframework.test.web.servlet.request.RequestPostProcessor;
-import org.springframework.test.web.servlet.setup.MockMvcBuilders;
-import org.springframework.web.bind.support.WebDataBinderFactory;
-import org.springframework.web.context.request.NativeWebRequest;
-import org.springframework.web.method.support.HandlerMethodArgumentResolver;
-import org.springframework.web.method.support.ModelAndViewContainer;
 
 import java.util.List;
 import java.util.UUID;
@@ -40,26 +38,41 @@ import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.when;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
+import static org.springframework.test.web.servlet.result.MockMvcResultHandlers.print;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
-@ExtendWith(MockitoExtension.class)
+/**
+ * Tests unitaires pour TeacherController.
+ * Utilise @WebMvcTest pour un test de tranche (slice test) focalisé sur la couche Web.
+ */
+@WebMvcTest(TeacherController.class)
+@Import(GlobalExceptionHandler.class)
+@AutoConfigureMockMvc(addFilters = false) // Désactive les filtres de sécurité pour simplifier le test du contrôleur
 class TeacherControllerTest {
 
-    @Mock
+    @Autowired
+    private MockMvc mockMvc;
+
+    @MockBean
     private TeacherStatsService teacherStatsService;
 
-    @Mock
+    @MockBean
     private ExerciseService exerciseService;
 
-    @InjectMocks
-    private TeacherController teacherController;
+    // Mocks requis pour charger le contexte d'application minimal (SecurityConfig)
+    @MockBean
+    private JwtAuthenticationFilter jwtAuthenticationFilter;
+    @MockBean
+    private JwtAuthenticationEntryPoint jwtAuthenticationEntryPoint;
+    @MockBean
+    private CustomAccessDeniedHandler customAccessDeniedHandler;
 
-    private MockMvc mockMvc;
-    private final ObjectMapper objectMapper = new ObjectMapper().findAndRegisterModules();
+    @Autowired
+    private ObjectMapper objectMapper;
 
     private User teacherUser;
-    private UUID teacherId = UUID.randomUUID();
+    private final UUID teacherId = UUID.fromString("606940f3-450f-4347-870d-9653e4552154");
 
     @BeforeEach
     void setUp() {
@@ -69,81 +82,117 @@ class TeacherControllerTest {
                 .role(UserRole.TEACHER)
                 .build();
 
-        mockMvc = MockMvcBuilders.standaloneSetup(teacherController)
-                .setCustomArgumentResolvers(new HandlerMethodArgumentResolver() {
-                    @Override
-                    public boolean supportsParameter(MethodParameter parameter) {
-                        return parameter.hasParameterAnnotation(AuthenticationPrincipal.class);
-                    }
-
-                    @Override
-                    public Object resolveArgument(MethodParameter parameter, ModelAndViewContainer mavContainer,
-                                                  NativeWebRequest webRequest, WebDataBinderFactory binderFactory) {
-                        return teacherUser;
-                    }
-                })
-                .build();
-    }
-
-    private RequestPostProcessor asTeacher() {
-        return (MockHttpServletRequest request) -> {
-            request.setUserPrincipal(
-                    new UsernamePasswordAuthenticationToken(teacherUser, null,
-                            List.of(new SimpleGrantedAuthority("ROLE_TEACHER"))));
-            return request;
-        };
+        // Simulation du principal d'authentification pour @AuthenticationPrincipal
+        SecurityContextHolder.getContext().setAuthentication(
+                new UsernamePasswordAuthenticationToken(teacherUser, null, List.of())
+        );
     }
 
     @Nested
-    @DisplayName("Statistiques (TEACHER)")
+    @DisplayName("Statistiques de l'Enseignant")
     class Statistics {
         @Test
-        @DisplayName("GET /api/v1/teacher/courses/stats - Toutes les stats")
+        @DisplayName("GET /api/v1/teacher/courses/stats - Récupération réussie")
         void getAllCoursesStatistics_success() throws Exception {
             TeacherCourseStatsResponse stats = TeacherCourseStatsResponse.builder().courseTitle("Java").build();
-            when(teacherStatsService.getAllCoursesStatistics(teacherId)).thenReturn(ApiResponse.success("Success", List.of(stats)));
+            when(teacherStatsService.getAllCoursesStatistics(teacherId))
+                    .thenReturn(ApiResponse.success("Succès", List.of(stats)));
 
-            mockMvc.perform(get("/api/v1/teacher/courses/stats").with(asTeacher()))
+            mockMvc.perform(get("/api/v1/teacher/courses/stats"))
+                    .andDo(print())
                     .andExpect(status().isOk())
+                    .andExpect(jsonPath("$.success").value(true))
                     .andExpect(jsonPath("$.data[0].courseTitle").value("Java"));
+        }
+
+        @Test
+        @DisplayName("GET /api/v1/teacher/courses/stats - Erreur Interne (500)")
+        void getAllCoursesStatistics_internalError() throws Exception {
+            when(teacherStatsService.getAllCoursesStatistics(teacherId))
+                    .thenThrow(new RuntimeException("Erreur de base de données"));
+
+            mockMvc.perform(get("/api/v1/teacher/courses/stats"))
+                    .andDo(print())
+                    .andExpect(status().isInternalServerError())
+                    .andExpect(jsonPath("$.success").value(false))
+                    .andExpect(jsonPath("$.message").value("Une erreur interne est survenue"));
         }
     }
 
     @Nested
-    @DisplayName("Gestion des Exercices (TEACHER)")
+    @DisplayName("Gestion des Exercices")
     class ExerciseManagement {
         @Test
-        @DisplayName("POST /api/v1/teacher/courses/{courseId}/exercises - Créer un exo")
+        @DisplayName("POST /api/v1/teacher/courses/{id}/exercises - Création réussie")
         void createExercise_success() throws Exception {
             ExerciseCreateRequest req = new ExerciseCreateRequest();
-            req.setTitle("New Exercise");
-            ExerciseResponse res = ExerciseResponse.builder().id(1).title("New Exercise").build();
+            req.setTitle("Nouvel Exercice");
+            com.ihm.backend.dto.response.ExerciseResponse res = com.ihm.backend.dto.response.ExerciseResponse.builder()
+                    .id(1).title("Nouvel Exercice").build();
 
-            when(exerciseService.createExercise(eq(10), eq(teacherId), any())).thenReturn(ApiResponse.success("Success", res));
+            when(exerciseService.createExercise(eq(10), eq(teacherId), any()))
+                    .thenReturn(ApiResponse.created("Succès", res));
 
             mockMvc.perform(post("/api/v1/teacher/courses/10/exercises")
-                            .with(asTeacher())
                             .contentType(MediaType.APPLICATION_JSON)
                             .content(objectMapper.writeValueAsString(req)))
+                    .andDo(print())
                     .andExpect(status().isCreated())
-                    .andExpect(jsonPath("$.data.title").value("New Exercise"));
+                    .andExpect(jsonPath("$.data.title").value("Nouvel Exercice"));
         }
 
         @Test
-        @DisplayName("PUT /api/v1/teacher/submissions/{id}/grade - Noter soumission")
+        @DisplayName("POST /api/v1/teacher/courses/{id}/exercises - Ressource non trouvée (404)")
+        void createExercise_notFound() throws Exception {
+            ExerciseCreateRequest req = new ExerciseCreateRequest();
+            req.setTitle("Test");
+
+            when(exerciseService.createExercise(eq(999), eq(teacherId), any()))
+                    .thenThrow(new ResourceNotFoundException("Cours non trouvé"));
+
+            mockMvc.perform(post("/api/v1/teacher/courses/999/exercises")
+                            .contentType(MediaType.APPLICATION_JSON)
+                            .content(objectMapper.writeValueAsString(req)))
+                    .andDo(print())
+                    .andExpect(status().isNotFound())
+                    .andExpect(jsonPath("$.success").value(false))
+                    .andExpect(jsonPath("$.message").value("Cours non trouvé"));
+        }
+
+        @Test
+        @DisplayName("PUT /api/v1/teacher/submissions/{id}/grade - Notation réussie")
         void gradeSubmission_success() throws Exception {
             GradeSubmissionRequest req = new GradeSubmissionRequest();
             req.setScore(15.5);
             StudentExerciseResponse res = StudentExerciseResponse.builder().id(1L).score(15.5).build();
 
-            when(exerciseService.gradeSubmission(eq(100L), eq(teacherId), any())).thenReturn(ApiResponse.success("Success", res));
+            when(exerciseService.gradeSubmission(eq(100L), eq(teacherId), any()))
+                    .thenReturn(ApiResponse.success("Success", res));
 
             mockMvc.perform(put("/api/v1/teacher/submissions/100/grade")
-                            .with(asTeacher())
                             .contentType(MediaType.APPLICATION_JSON)
                             .content(objectMapper.writeValueAsString(req)))
+                    .andDo(print())
                     .andExpect(status().isOk())
                     .andExpect(jsonPath("$.data.score").value(15.5));
+        }
+
+        @Test
+        @DisplayName("PUT /api/v1/teacher/submissions/{id}/grade - Mauvaise requête (400)")
+        void gradeSubmission_badRequest() throws Exception {
+            GradeSubmissionRequest req = new GradeSubmissionRequest();
+            req.setScore(100.0);
+
+            when(exerciseService.gradeSubmission(eq(100L), eq(teacherId), any()))
+                    .thenThrow(new IllegalArgumentException("Note invalide"));
+
+            mockMvc.perform(put("/api/v1/teacher/submissions/100/grade")
+                            .contentType(MediaType.APPLICATION_JSON)
+                            .content(objectMapper.writeValueAsString(req)))
+                    .andDo(print())
+                    .andExpect(status().isBadRequest())
+                    .andExpect(jsonPath("$.success").value(false))
+                    .andExpect(jsonPath("$.message").value("Note invalide"));
         }
     }
 }

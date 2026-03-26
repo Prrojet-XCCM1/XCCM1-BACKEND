@@ -5,93 +5,104 @@ import com.ihm.backend.dto.request.*;
 import com.ihm.backend.dto.response.*;
 import com.ihm.backend.entity.User;
 import com.ihm.backend.enums.UserRole;
+import com.ihm.backend.exception.GlobalExceptionHandler;
+import com.ihm.backend.exception.ResourceNotFoundException;
+import com.ihm.backend.security.CustomAccessDeniedHandler;
+import com.ihm.backend.security.JwtAuthenticationEntryPoint;
+import com.ihm.backend.security.JwtAuthenticationFilter;
 import com.ihm.backend.service.AdminService;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
-import org.junit.jupiter.api.extension.ExtendWith;
-import org.mockito.InjectMocks;
-import org.mockito.Mock;
-import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
+import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
+import org.springframework.boot.test.mock.mockito.MockBean;
+import org.springframework.context.annotation.Import;
 import org.springframework.http.MediaType;
-import org.springframework.mock.web.MockHttpServletRequest;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
-import org.springframework.security.core.authority.SimpleGrantedAuthority;
+import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.test.web.servlet.MockMvc;
-import org.springframework.test.web.servlet.request.RequestPostProcessor;
-import org.springframework.test.web.servlet.setup.MockMvcBuilders;
 
 import java.util.List;
 import java.util.UUID;
 
 import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.when;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
+import static org.springframework.test.web.servlet.result.MockMvcResultHandlers.print;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
-@ExtendWith(MockitoExtension.class)
+/**
+ * Tests unitaires pour AdminController.
+ * Refactorisés selon les standards experts Spring Boot.
+ */
+@WebMvcTest(AdminController.class)
+@Import(GlobalExceptionHandler.class)
+@AutoConfigureMockMvc(addFilters = false)
 class AdminControllerTest {
 
-    @Mock
+    @Autowired
+    private MockMvc mockMvc;
+
+    @MockBean
     private AdminService adminService;
 
-    @InjectMocks
-    private AdminController adminController;
+    @MockBean
+    private JwtAuthenticationFilter jwtAuthenticationFilter;
+    @MockBean
+    private JwtAuthenticationEntryPoint jwtAuthenticationEntryPoint;
+    @MockBean
+    private CustomAccessDeniedHandler customAccessDeniedHandler;
 
-    private MockMvc mockMvc;
-    private final ObjectMapper objectMapper = new ObjectMapper().findAndRegisterModules();
+    @Autowired
+    private ObjectMapper objectMapper;
 
     private User adminUser;
-    private UUID randomId = UUID.randomUUID();
+    private final UUID randomId = UUID.randomUUID();
 
     @BeforeEach
     void setUp() {
-        mockMvc = MockMvcBuilders.standaloneSetup(adminController).build();
-
         adminUser = User.builder()
                 .id(UUID.randomUUID())
                 .email("admin@test.com")
                 .role(UserRole.ADMIN)
                 .build();
-    }
 
-    private RequestPostProcessor asAdmin() {
-        return (MockHttpServletRequest request) -> {
-            request.setUserPrincipal(
-                    new UsernamePasswordAuthenticationToken(adminUser, null,
-                            List.of(new SimpleGrantedAuthority("ROLE_ADMIN"))));
-            return request;
-        };
+        SecurityContextHolder.getContext().setAuthentication(
+                new UsernamePasswordAuthenticationToken(adminUser, null, List.of())
+        );
     }
 
     @Nested
-    @DisplayName("Statistiques")
+    @DisplayName("Statistiques d'Administration")
     class Statistics {
         @Test
-        @DisplayName("GET /api/v1/admin/stats - Récupérer les stats globales")
-        void getStatistics_returnsStats() throws Exception {
+        @DisplayName("GET /api/v1/admin/stats - Succès")
+        void getStatistics_success() throws Exception {
             AdminStatisticsResponse stats = AdminStatisticsResponse.builder()
                     .totalUsers(10L).studentCount(5L).teacherCount(4L).totalEnrollments(15L)
                     .build();
-            when(adminService.getStatistics()).thenReturn(ApiResponse.success("Success", stats));
+            when(adminService.getStatistics()).thenReturn(ApiResponse.success("Succès", stats));
 
-            mockMvc.perform(get("/api/v1/admin/stats").with(asAdmin()))
+            mockMvc.perform(get("/api/v1/admin/stats"))
+                    .andDo(print())
                     .andExpect(status().isOk())
                     .andExpect(jsonPath("$.data.totalUsers").value(10));
         }
 
         @Test
-        @DisplayName("GET /api/v1/admin/enrollments/stats - Récupérer les stats enrollments")
-        void getEnrollmentStatistics_returnsStats() throws Exception {
-            EnrollmentStatsResponse stats = EnrollmentStatsResponse.builder().totalEnrollments(50L).build();
-            when(adminService.getEnrollmentStatistics()).thenReturn(ApiResponse.success("Success", stats));
+        @DisplayName("GET /api/v1/admin/enrollments/stats - Erreur Interne (500)")
+        void getEnrollmentStatistics_error() throws Exception {
+            when(adminService.getEnrollmentStatistics())
+                    .thenThrow(new RuntimeException("Erreur inattendue"));
 
-            mockMvc.perform(get("/api/v1/admin/enrollments/stats").with(asAdmin()))
-                    .andExpect(status().isOk())
-                    .andExpect(jsonPath("$.data.totalEnrollments").value(50));
+            mockMvc.perform(get("/api/v1/admin/enrollments/stats"))
+                    .andDo(print())
+                    .andExpect(status().isInternalServerError())
+                    .andExpect(jsonPath("$.success").value(false));
         }
     }
 
@@ -99,38 +110,41 @@ class AdminControllerTest {
     @DisplayName("Gestion des Utilisateurs")
     class UserManagement {
         @Test
-        @DisplayName("POST /api/v1/admin/users/student - Créer étudiant")
-        void createStudent_callsService() throws Exception {
+        @DisplayName("POST /api/v1/admin/users/student - Création réussie")
+        void createStudent_success() throws Exception {
             StudentRegisterRequest req = new StudentRegisterRequest();
             req.setEmail("new@student.com");
-            AuthenticationResponse authRes = AuthenticationResponse.builder().token("jwt").build();
-            when(adminService.createStudent(any())).thenReturn(ApiResponse.created("success", authRes));
+            AuthenticationResponse authRes = AuthenticationResponse.builder().token("jwt-token").build();
+            
+            when(adminService.createStudent(any())).thenReturn(ApiResponse.created("Succès", authRes));
 
             mockMvc.perform(post("/api/v1/admin/users/student")
-                            .with(asAdmin())
                             .contentType(MediaType.APPLICATION_JSON)
                             .content(objectMapper.writeValueAsString(req)))
+                    .andDo(print())
                     .andExpect(status().isCreated())
-                    .andExpect(jsonPath("$.data.token").value("jwt"));
+                    .andExpect(jsonPath("$.data.token").value("jwt-token"));
         }
 
         @Test
-        @DisplayName("GET /api/v1/admin/users - Lister tous les utilisateurs")
-        void getAllUsers_returnsList() throws Exception {
-            UserDetailResponse user = UserDetailResponse.builder().email("test@test.com").build();
-            when(adminService.getAllUsers()).thenReturn(ApiResponse.success("Success", List.of(user)));
+        @DisplayName("GET /api/v1/admin/users/{id} - Utilisateur non trouvé (404)")
+        void getUserById_notFound() throws Exception {
+            when(adminService.getUserById(randomId))
+                    .thenThrow(new ResourceNotFoundException("Utilisateur non trouvé"));
 
-            mockMvc.perform(get("/api/v1/admin/users").with(asAdmin()))
-                    .andExpect(status().isOk())
-                    .andExpect(jsonPath("$.data[0].email").value("test@test.com"));
+            mockMvc.perform(get("/api/v1/admin/users/" + randomId))
+                    .andDo(print())
+                    .andExpect(status().isNotFound())
+                    .andExpect(jsonPath("$.success").value(false));
         }
 
         @Test
-        @DisplayName("DELETE /api/v1/admin/users/{id} - Supprimer un utilisateur")
-        void deleteUser_callsService() throws Exception {
+        @DisplayName("DELETE /api/v1/admin/users/{id} - Suppression réussie")
+        void deleteUser_success() throws Exception {
             when(adminService.deleteUser(randomId)).thenReturn(ApiResponse.success("User deleted"));
 
-            mockMvc.perform(delete("/api/v1/admin/users/" + randomId).with(asAdmin()))
+            mockMvc.perform(delete("/api/v1/admin/users/" + randomId))
+                    .andDo(print())
                     .andExpect(status().isOk())
                     .andExpect(jsonPath("$.message").value("User deleted"));
         }
@@ -140,16 +154,17 @@ class AdminControllerTest {
     @DisplayName("Gestion des Cours")
     class CourseManagement {
         @Test
-        @DisplayName("GET /api/v1/admin/courses - Lister tous les cours")
-        void getAllCourses_returnsList() throws Exception {
+        @DisplayName("GET /api/v1/admin/courses - Liste des cours")
+        void getAllCourses_success() throws Exception {
             CourseResponse course = new CourseResponse();
             course.setId(1);
-            course.setTitle("Java");
-            when(adminService.getAllCourses()).thenReturn(ApiResponse.success("Success", List.of(course)));
+            course.setTitle("Spring Boot Expert");
+            when(adminService.getAllCourses()).thenReturn(ApiResponse.success("Succès", List.of(course)));
 
-            mockMvc.perform(get("/api/v1/admin/courses").with(asAdmin()))
+            mockMvc.perform(get("/api/v1/admin/courses"))
+                    .andDo(print())
                     .andExpect(status().isOk())
-                    .andExpect(jsonPath("$.data[0].title").value("Java"));
+                    .andExpect(jsonPath("$.data[0].title").value("Spring Boot Expert"));
         }
     }
 }
