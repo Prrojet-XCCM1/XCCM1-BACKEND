@@ -88,7 +88,7 @@ public class CourseClassResponse {
                                     r.setDownloadCount(c.getDownloadCount());
                                     r.setCreatedAt(c.getCreatedAt());
                                     r.setPublishedAt(c.getPublishedAt());
-                                    r.setContent(com.ihm.backend.utils.JsonUtils.toMap(c.getContent()));
+                                    r.setContent(c.getContent());
                                     return r;
                                 })
                                 .collect(Collectors.toList())

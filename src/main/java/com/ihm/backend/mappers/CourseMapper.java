@@ -35,11 +35,4 @@ public interface CourseMapper {
     @Mapping(target = "createdAt", ignore = true)
     void updateEntity(CourseUpdateRequest dto, @MappingTarget Course entity);
 
-    default String mapMapToString(java.util.Map<String, Object> content) {
-        return com.ihm.backend.utils.JsonUtils.toJson(content);
-    }
-
-    default java.util.Map<String, Object> mapStringToMap(String content) {
-        return com.ihm.backend.utils.JsonUtils.toMap(content);
-    }
 }

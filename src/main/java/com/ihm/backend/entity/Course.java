@@ -1,6 +1,7 @@
 package com.ihm.backend.entity;
 
 import java.time.LocalDateTime;
+import java.util.Map;
 
 import com.ihm.backend.enums.CourseStatus;
 
@@ -50,8 +51,9 @@ public class Course {
 
     private LocalDateTime createdAt;
     private LocalDateTime publishedAt;
-    @Column(columnDefinition = "TEXT")
-    private String content;
+    @JdbcTypeCode(SqlTypes.JSON)
+    @Column(columnDefinition = "json")
+    private Map<String, Object> content;
     private String coverImage;
     private String photoUrl;
 
