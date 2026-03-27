@@ -33,6 +33,9 @@ public interface CourseMapper {
     @Mapping(target = "author", ignore = true)
     @Mapping(target = "courseClass", ignore = true)
     @Mapping(target = "createdAt", ignore = true)
+    @Mapping(target = "publishedAt", ignore = true)
+    @Mapping(target = "viewCount", ignore = true)
+
     void updateEntity(CourseUpdateRequest dto, @MappingTarget Course entity);
 
 }
