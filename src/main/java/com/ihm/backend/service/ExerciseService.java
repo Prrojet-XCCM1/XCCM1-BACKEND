@@ -188,7 +188,7 @@ public class ExerciseService {
             submission.setStudent(userRepository.findById(studentId).orElseThrow());
         }
 
-        submission.setContent(request.getContent());
+        submission.setContent(com.ihm.backend.utils.JsonUtils.toJson(request.getContent()));
         submission.setSubmittedAt(LocalDateTime.now());
         // Reset score if re-submitted? Maybe not.
 

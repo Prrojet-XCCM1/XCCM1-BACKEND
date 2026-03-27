@@ -41,8 +41,8 @@ public class Exercise {
     @Column(name = "due_date")
     private LocalDateTime dueDate;
 
-    @JdbcTypeCode(SqlTypes.JSON)
-    private java.util.Map<String, Object> content;
+    @Column(columnDefinition = "TEXT")
+    private String content;
 
     @CreationTimestamp
     @Column(name = "created_at", updatable = false)

@@ -9,6 +9,7 @@ import java.util.stream.Collectors;
 
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.multipart.MultipartFile;
 
 import com.ihm.backend.dto.response.CourseResponse;
@@ -20,6 +21,8 @@ import com.ihm.backend.mappers.CourseMapper;
 import com.ihm.backend.repository.CourseRepository;
 import com.ihm.backend.repository.EnrollmentRepository;
 import com.ihm.backend.repository.UserRepository;
+
+
 
 import java.util.UUID;
 import com.ihm.backend.entity.*;
@@ -48,6 +51,7 @@ public class CourseService {
     }
     // get all courses for a particular author
 
+    @Transactional(readOnly = true)
     public List<CourseResponse> getAllCoursesForTeacher(UUID authorId) throws Exception {
         User author = userRepository.findById(authorId).orElseThrow(() -> new Exception("Teacher does not exists"));
         return courseMapper.toResponse(courseRepository.findByAuthor(author));
@@ -65,6 +69,7 @@ public class CourseService {
     }
 
     // get all courses
+    @Transactional(readOnly = true)
     public List<CourseResponse> getAllCourses() {
         return courseMapper.toResponse(courseRepository.findByStatus(CourseStatus.PUBLISHED));
     }
@@ -133,6 +138,7 @@ public class CourseService {
      * Récupère tous les cours publiés enrichis avec l'enrôlement de l'utilisateur
      * si applicable
      */
+    @Transactional(readOnly = true)
     public List<EnrichedCourseResponse> getEnrichedCourses(UUID userId) {
         List<Course> publishedCourses = courseRepository.findByStatus(CourseStatus.PUBLISHED);
 
@@ -151,6 +157,7 @@ public class CourseService {
     /**
      * Récupère un cours enrichi avec l'enrôlement de l'utilisateur si applicable
      */
+    @Transactional(readOnly = true)
     public EnrichedCourseResponse getEnrichedCourse(Integer courseId, UUID userId) throws Exception {
         Course course = courseRepository.findById(courseId)
                 .orElseThrow(() -> new ResourceNotFoundException("Cours non trouvé"));

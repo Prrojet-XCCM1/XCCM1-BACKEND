@@ -299,7 +299,7 @@ public class AdminServiceImpl implements AdminService {
         if (request.getStatus() != null)
             course.setStatus(request.getStatus());
         if (request.getContent() != null)
-            course.setContent(request.getContent());
+            course.setContent(com.ihm.backend.utils.JsonUtils.toJson(request.getContent()));
         if (request.getCoverImage() != null)
             course.setCoverImage(request.getCoverImage());
 
