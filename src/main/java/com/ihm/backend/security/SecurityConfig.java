@@ -51,6 +51,7 @@ public class SecurityConfig {
                                                 // === SWAGGER/OPENAPI - ACCÈS PUBLIC ===
                                                 .requestMatchers(
                                                                 "/",
+                                                                "/ws/**",
                                                                 "/swagger-ui/**",
                                                                 "/swagger-ui.html",
                                                                 "/v3/api-docs/**",
