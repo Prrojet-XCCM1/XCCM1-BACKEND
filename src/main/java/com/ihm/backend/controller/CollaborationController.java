@@ -16,6 +16,10 @@ import org.springframework.stereotype.Controller;
 
 import org.springframework.messaging.handler.annotation.MessageExceptionHandler;
 
+import com.ihm.backend.repository.EnrollmentRepository;
+import com.ihm.backend.enums.EnrollmentStatus;
+import java.util.Optional;
+
 @Controller
 @RequiredArgsConstructor
 @Slf4j
@@ -24,10 +28,18 @@ public class CollaborationController {
     private final SimpMessagingTemplate messagingTemplate;
     private final LockService lockService;
     private final ExerciseRepository exerciseRepository;
+    private final EnrollmentRepository enrollmentRepository;
 
     @MessageMapping("/projet/{id}/action")
     public void handleAction(@DestinationVariable Long id, @Payload CollaborationMessage message, Authentication authentication) {
         String userEmail = authentication.getName();
+        
+        // --- Vérification de l'Autorisation ---
+        if (!isAuthorized(id, userEmail)) {
+            sendError(userEmail, "Non autorisé à modifier ce document");
+            return;
+        }
+
         message.setSenderEmail(userEmail);
 
         switch (message.getType()) {
@@ -83,6 +95,28 @@ public class CollaborationController {
             exerciseRepository.save(exercise);
             log.info("Exercise {} saved successfully", exerciseId);
         });
+    }
+
+    private boolean isAuthorized(Long exerciseId, String userEmail) {
+        Optional<Exercise> exerciseOpt = exerciseRepository.findById(exerciseId.intValue());
+        if (exerciseOpt.isEmpty()) return false;
+        
+        Exercise exercise = exerciseOpt.get();
+        if (exercise.getCourse() == null) return false;
+
+        // Est-ce l'auteur ?
+        if (exercise.getCourse().getAuthor().getEmail().equals(userEmail)) {
+            return true;
+        }
+
+        // Est-ce un collaborateur inscrit/invité ?
+        return enrollmentRepository.findByCourse_IdAndUser_Id(
+                exercise.getCourse().getId(), 
+                ((com.ihm.backend.entity.User) org.springframework.security.core.context.SecurityContextHolder.getContext().getAuthentication().getPrincipal()).getId()
+        ).map(enrollment -> 
+                enrollment.getStatus() == EnrollmentStatus.APPROVED || 
+                enrollment.getStatus() == EnrollmentStatus.INVITED
+        ).orElse(false);
     }
 
     @MessageExceptionHandler
