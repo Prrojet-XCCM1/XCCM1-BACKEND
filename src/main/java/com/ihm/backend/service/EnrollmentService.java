@@ -257,4 +257,44 @@ public class EnrollmentService {
         log.info("L'utilisateur {} a annulé sa demande d'enrôlement en attente pour le cours {}", userId,
                 enrollment.getCourse().getId());
     }
+
+    /**
+     * Invite un utilisateur à un cours par email
+     */
+    @Transactional
+    public EnrollmentDTO inviteUser(Integer courseId, String email, UUID inviterId) throws Exception {
+        log.info("Invitation de l'utilisateur {} au cours {} par {}", email, courseId, inviterId);
+
+        Course course = courseRepository.findById(courseId)
+                .orElseThrow(() -> new ResourceNotFoundException("Cours non trouvé"));
+
+        // Seul l'auteur ou un admin peut inviter
+        if (!course.getAuthor().getId().equals(inviterId)) {
+            throw new AccessDeniedException("Seul l'auteur du cours peut inviter des collaborateurs");
+        }
+
+        User invitedUser = userRepository.findByEmail(email)
+                .orElseThrow(() -> new ResourceNotFoundException("Utilisateur non trouvé avec l'email: " + email));
+
+        // Vérifier s'il est déjà enrôlé
+        if (enrollmentRepository.existsByCourse_IdAndUser_Id(courseId, invitedUser.getId())) {
+            throw new IllegalStateException("Cet utilisateur est déjà associé à ce cours");
+        }
+
+        Enrollment enrollment = Enrollment.builder()
+                .user(invitedUser)
+                .course(course)
+                .progress(0.0)
+                .completed(false)
+                .status(com.ihm.backend.enums.EnrollmentStatus.INVITED)
+                .build();
+
+        Enrollment saved = enrollmentRepository.save(enrollment);
+        log.info("Invitation créée: id={}", saved.getId());
+
+        // Notifier l'invité
+        notificationService.sendEnrollmentAcceptedEmail(invitedUser, "Invitation au cours: " + course.getTitle());
+
+        return EnrollmentDTO.fromEntity(saved);
+    }
 }

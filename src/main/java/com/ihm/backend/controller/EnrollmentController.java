@@ -140,4 +140,17 @@ public class EnrollmentController {
         enrollmentService.cancelPendingEnrollment(enrollmentId, user.getId());
         return ResponseEntity.ok(ApiResponse.success("Demande d'enrôlement annulée", null));
     }
+
+    /**
+     * Inviter un utilisateur à collaborer sur un cours
+     */
+    @PostMapping("/invite")
+    @PreAuthorize("hasRole('TEACHER')")
+    public ResponseEntity<ApiResponse<EnrollmentDTO>> inviteUser(
+            @RequestBody @jakarta.validation.Valid com.ihm.backend.dto.request.InvitationRequest request,
+            Authentication authentication) throws Exception {
+        User inviter = (User) authentication.getPrincipal();
+        EnrollmentDTO invitation = enrollmentService.inviteUser(request.getCourseId(), request.getEmail(), inviter.getId());
+        return ResponseEntity.ok(ApiResponse.success("Invitation envoyée avec succès", invitation));
+    }
 }
