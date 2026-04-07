@@ -94,7 +94,7 @@ public class CourseController {
     }
 
     @GetMapping("/{authorId}/status/{status}")
-    public ResponseEntity<ApiResponse<List<CourseResponse>>> getCoureByStatusForAuthor(@PathVariable Integer authorId,
+    public ResponseEntity<ApiResponse<List<CourseResponse>>> getCoureByStatusForAuthor(@PathVariable UUID authorId,
             @PathVariable CourseStatus status) throws Exception {
         return ResponseEntity.ok(ApiResponse.success("Cours récupérés avec succès",
                 courseService.getCoursesByStatusForAuthor(authorId, status)));
