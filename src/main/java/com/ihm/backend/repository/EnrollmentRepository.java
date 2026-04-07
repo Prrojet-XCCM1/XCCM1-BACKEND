@@ -77,4 +77,18 @@ public interface EnrollmentRepository extends JpaRepository<Enrollment, Long> {
      * Compte les enrollments par cours et statut
      */
     long countByCourse_IdAndStatus(Integer courseId, com.ihm.backend.enums.EnrollmentStatus status);
+
+    /**
+     * Compte le nombre de participants distincts d'une classe
+     * (= étudiants uniques inscrits dans au moins un cours de la classe)
+     */
+    @Query("SELECT COUNT(DISTINCT e.user.id) FROM Enrollment e WHERE e.course.courseClass.id = :classId")
+    long countDistinctParticipantsByClassId(Long classId);
+
+    /**
+     * Compte tous les participants d'une classe sans distinction
+     * (= somme des participants de chaque cours dans la classe)
+     */
+    @Query("SELECT COUNT(e) FROM Enrollment e WHERE e.course.courseClass.id = :classId")
+    long countTotalParticipantsByClassId(Long classId);
 }
