@@ -13,6 +13,7 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.Authentication;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 
@@ -30,9 +31,8 @@ public class CourseController {
     @PostMapping("/{authorId}")
     public ResponseEntity<ApiResponse<CourseResponse>> createCourse(@RequestBody CourseCreateRequest request,
             @PathVariable UUID authorId,
-            Authentication authentication) throws Exception {
+            @AuthenticationPrincipal User currentUser) throws Exception {
         // Vérifier que l'enseignant crée un cours pour lui-même
-        User currentUser = (User) authentication.getPrincipal();
         if (!currentUser.getId().equals(authorId)) {
             return ResponseEntity.status(HttpStatus.FORBIDDEN)
                     .body(ApiResponse.forbidden("Vous ne pouvez créer un cours que pour vous-même", null));
@@ -45,9 +45,8 @@ public class CourseController {
     @PreAuthorize("hasRole('TEACHER')")
     @GetMapping("/{authorId}")
     public ResponseEntity<ApiResponse<List<CourseResponse>>> getAuthorCourses(@PathVariable UUID authorId,
-            Authentication authentication) throws Exception {
+            @AuthenticationPrincipal User currentUser) throws Exception {
         // Vérifier que l'enseignant accède à ses propres cours
-        User currentUser = (User) authentication.getPrincipal();
         if (!currentUser.getId().equals(authorId)) {
             return ResponseEntity.status(HttpStatus.FORBIDDEN)
                     .body(ApiResponse.forbidden("Vous ne pouvez consulter que vos propres cours", null));
@@ -61,8 +60,7 @@ public class CourseController {
     @PostMapping("/{courseId}/coverImage/upload")
     public ResponseEntity<ApiResponse<CourseResponse>> uploadImage(@PathVariable Integer courseId,
             @RequestParam MultipartFile image,
-            Authentication authentication) throws Exception {
-        User currentUser = (User) authentication.getPrincipal();
+            @AuthenticationPrincipal User currentUser) throws Exception {
         courseService.validateOwnership(courseId, currentUser.getId());
 
         return ResponseEntity.ok(ApiResponse.success("Image de couverture téléchargée avec succès",
@@ -73,8 +71,7 @@ public class CourseController {
     @GetMapping("/{courseId}/setStatus/{status}")
     public ResponseEntity<ApiResponse<CourseResponse>> changeCourseStatus(@PathVariable Integer courseId,
             @PathVariable CourseStatus status,
-            Authentication authentication) throws Exception {
-        User currentUser = (User) authentication.getPrincipal();
+            @AuthenticationPrincipal User currentUser) throws Exception {
         courseService.validateOwnership(courseId, currentUser.getId());
 
         return ResponseEntity.ok(ApiResponse.success("Statut du cours mis à jour avec succès",
@@ -85,8 +82,7 @@ public class CourseController {
     @PatchMapping("/{courseId}/status")
     public ResponseEntity<ApiResponse<CourseResponse>> updateCourseStatus(@PathVariable Integer courseId,
             @RequestParam CourseStatus status,
-            Authentication authentication) throws Exception {
-        User currentUser = (User) authentication.getPrincipal();
+            @AuthenticationPrincipal User currentUser) throws Exception {
         courseService.validateOwnership(courseId, currentUser.getId());
 
         return ResponseEntity.ok(ApiResponse.success("Statut du cours mis à jour avec succès",
@@ -111,8 +107,7 @@ public class CourseController {
     @PutMapping("/{courseId}")
     public ResponseEntity<ApiResponse<CourseResponse>> updateCourse(@PathVariable Integer courseId,
             @RequestBody CourseUpdateRequest request,
-            Authentication authentication) throws Exception {
-        User currentUser = (User) authentication.getPrincipal();
+            @AuthenticationPrincipal User currentUser) throws Exception {
         courseService.validateOwnership(courseId, currentUser.getId());
 
         return ResponseEntity
@@ -122,8 +117,7 @@ public class CourseController {
     @PreAuthorize("hasRole('TEACHER')")
     @DeleteMapping("/{courseId}")
     public ResponseEntity<ApiResponse<Void>> deleteCourse(@PathVariable Integer courseId,
-            Authentication authentication) throws Exception {
-        User currentUser = (User) authentication.getPrincipal();
+            @AuthenticationPrincipal User currentUser) throws Exception {
         courseService.validateOwnership(courseId, currentUser.getId());
 
         courseService.deleteCourse(courseId);
@@ -137,10 +131,9 @@ public class CourseController {
      */
     @PreAuthorize("isAuthenticated()")
     @GetMapping("/enriched")
-    public ResponseEntity<ApiResponse<List<EnrichedCourseResponse>>> getEnrichedCourses(Authentication authentication) {
+    public ResponseEntity<ApiResponse<List<EnrichedCourseResponse>>> getEnrichedCourses(@AuthenticationPrincipal User currentUser) {
         UUID userId = null;
-        if (authentication != null) {
-            User currentUser = (User) authentication.getPrincipal();
+        if (currentUser != null) {
             userId = currentUser.getId();
         }
 
@@ -154,10 +147,9 @@ public class CourseController {
     @PreAuthorize("isAuthenticated()")
     @GetMapping("/enriched/{courseId}")
     public ResponseEntity<ApiResponse<EnrichedCourseResponse>> getEnrichedCourse(@PathVariable Integer courseId,
-            Authentication authentication) throws Exception {
+            @AuthenticationPrincipal User currentUser) throws Exception {
         UUID userId = null;
-        if (authentication != null) {
-            User currentUser = (User) authentication.getPrincipal();
+        if (currentUser != null) {
             userId = currentUser.getId();
         }
 

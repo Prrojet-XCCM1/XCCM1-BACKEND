@@ -58,14 +58,7 @@ public class ClassEnrollmentService {
             throw new IllegalStateException("Vous êtes déjà inscrit à cette classe");
         }
 
-        // Vérifier le nombre maximum d'étudiants
-        int maxStudents = courseClass.getMaxStudents() != null ? courseClass.getMaxStudents() : 0;
-        if (maxStudents > 0) {
-            long approvedCount = enrollmentRepository.countByCourseClass_IdAndStatus(classId, EnrollmentStatus.APPROVED);
-            if (approvedCount >= maxStudents) {
-                throw new IllegalStateException("La classe est complète (maximum " + maxStudents + " étudiants)");
-            }
-        }
+        // Note: L'enseignant doit pouvoir avoir un nombre illimité de participants, aucune restriction n'est appliquée.
 
         ClassEnrollment enrollment = ClassEnrollment.builder()
                 .student(student)

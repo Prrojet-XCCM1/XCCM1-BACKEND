@@ -19,6 +19,7 @@ import org.springframework.context.annotation.Import;
 import org.springframework.http.MediaType;
 import org.springframework.test.web.servlet.MockMvc;
 
+import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.verify;
@@ -92,9 +93,11 @@ class ContactControllerTest {
             ContactRequest req = new ContactRequest();
             req.setName("Error");
             req.setEmail("error@test.com");
+            req.setSubject("Error Subject");
+            req.setMessage("Error message for test");
 
             doThrow(new RuntimeException("Mail server down"))
-                    .when(notificationService).sendContactAcknowledgement(anyString(), anyString(), anyString());
+                    .when(notificationService).sendContactAcknowledgement(any(), any(), any());
 
             mockMvc.perform(post("/api/v1/public/contact")
                             .contentType(MediaType.APPLICATION_JSON)

@@ -39,13 +39,13 @@ public class CourseClassResponse {
     /** Liste des cours de la classe */
     private List<CourseResponse> courses;
 
-    /** Nombre d'étudiants dont le statut est APPROVED */
-    private Long studentCount;
+    /** Nombre de participants (inscrits distincts dans les cours de la classe) */
+    private Long participantCount;
 
     /** Nombre de demandes en attente (PENDING) */
     private Long pendingCount;
 
-    /** Nombre maximum d'étudiants (0 = illimité) */
+    /** Nombre maximum d'étudiants (0 = illimité, non utilisé comme limite stricte) */
     private Integer maxStudents;
 
     @JsonFormat(shape = JsonFormat.Shape.STRING, pattern = "yyyy-MM-dd'T'HH:mm:ss")
@@ -93,7 +93,7 @@ public class CourseClassResponse {
                                 })
                                 .collect(Collectors.toList())
                         : List.of())
-                .studentCount(studentCount)
+                .participantCount(studentCount)
                 .pendingCount(pendingCount)
                 .maxStudents(entity.getMaxStudents())
                 .createdAt(entity.getCreatedAt())

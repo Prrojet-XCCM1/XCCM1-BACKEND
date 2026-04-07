@@ -15,6 +15,7 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.Authentication;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 
@@ -46,8 +47,7 @@ public class CourseClassController {
     @PreAuthorize("hasRole('TEACHER')")
     public ResponseEntity<ApiResponse<CourseClassResponse>> createClass(
             @RequestBody CourseClassCreateRequest request,
-            Authentication authentication) {
-        User teacher = (User) authentication.getPrincipal();
+            @AuthenticationPrincipal User teacher) {
         CourseClassResponse response = courseClassService.createClass(request, teacher.getId());
         return ResponseEntity.status(HttpStatus.CREATED)
                 .body(ApiResponse.created("Classe créée avec succès", response));
@@ -59,8 +59,7 @@ public class CourseClassController {
     @Operation(summary = "Mes classes (enseignant)")
     @GetMapping("/my")
     @PreAuthorize("hasRole('TEACHER')")
-    public ResponseEntity<ApiResponse<List<CourseClassResponse>>> getMyClasses(Authentication authentication) {
-        User teacher = (User) authentication.getPrincipal();
+    public ResponseEntity<ApiResponse<List<CourseClassResponse>>> getMyClasses(@AuthenticationPrincipal User teacher) {
         List<CourseClassResponse> classes = courseClassService.getMyClasses(teacher.getId());
         return ResponseEntity.ok(ApiResponse.success("Classes récupérées avec succès", classes));
     }
@@ -74,8 +73,7 @@ public class CourseClassController {
     public ResponseEntity<ApiResponse<CourseClassResponse>> updateClass(
             @PathVariable Long classId,
             @RequestBody CourseClassUpdateRequest request,
-            Authentication authentication) throws Exception {
-        User teacher = (User) authentication.getPrincipal();
+            @AuthenticationPrincipal User teacher) throws Exception {
         CourseClassResponse response = courseClassService.updateClass(classId, request, teacher.getId());
         return ResponseEntity.ok(ApiResponse.success("Classe mise à jour avec succès", response));
     }
@@ -88,8 +86,7 @@ public class CourseClassController {
     @PreAuthorize("hasRole('TEACHER')")
     public ResponseEntity<ApiResponse<Void>> deleteClass(
             @PathVariable Long classId,
-            Authentication authentication) throws Exception {
-        User teacher = (User) authentication.getPrincipal();
+            @AuthenticationPrincipal User teacher) throws Exception {
         courseClassService.deleteClass(classId, teacher.getId());
         return ResponseEntity.ok(ApiResponse.success("Classe supprimée avec succès", null));
     }
@@ -103,8 +100,7 @@ public class CourseClassController {
     public ResponseEntity<ApiResponse<CourseClassResponse>> changeStatus(
             @PathVariable Long classId,
             @RequestParam ClassStatus status,
-            Authentication authentication) throws Exception {
-        User teacher = (User) authentication.getPrincipal();
+            @AuthenticationPrincipal User teacher) throws Exception {
         CourseClassResponse response = courseClassService.changeStatus(classId, status, teacher.getId());
         return ResponseEntity.ok(ApiResponse.success("Statut mis à jour vers " + status, response));
     }
@@ -118,8 +114,7 @@ public class CourseClassController {
     public ResponseEntity<ApiResponse<CourseClassResponse>> addCourse(
             @PathVariable Long classId,
             @PathVariable Integer courseId,
-            Authentication authentication) throws Exception {
-        User teacher = (User) authentication.getPrincipal();
+            @AuthenticationPrincipal User teacher) throws Exception {
         CourseClassResponse response = courseClassService.addCourseToClass(classId, courseId, teacher.getId());
         return ResponseEntity.ok(ApiResponse.success("Cours ajouté à la classe avec succès", response));
     }
@@ -133,8 +128,7 @@ public class CourseClassController {
     public ResponseEntity<ApiResponse<CourseClassResponse>> removeCourse(
             @PathVariable Long classId,
             @PathVariable Integer courseId,
-            Authentication authentication) throws Exception {
-        User teacher = (User) authentication.getPrincipal();
+            @AuthenticationPrincipal User teacher) throws Exception {
         CourseClassResponse response = courseClassService.removeCourseFromClass(classId, courseId, teacher.getId());
         return ResponseEntity.ok(ApiResponse.success("Cours retiré de la classe", response));
     }
@@ -148,8 +142,7 @@ public class CourseClassController {
     public ResponseEntity<ApiResponse<CourseClassResponse>> uploadCoverImage(
             @PathVariable Long classId,
             @RequestParam("image") MultipartFile image,
-            Authentication authentication) throws Exception {
-        User teacher = (User) authentication.getPrincipal();
+            @AuthenticationPrincipal User teacher) throws Exception {
         CourseClassResponse response = courseClassService.uploadCoverImage(classId, image, teacher.getId());
         return ResponseEntity.ok(ApiResponse.success("Image de couverture mise à jour", response));
     }
@@ -163,11 +156,8 @@ public class CourseClassController {
     @Operation(summary = "Lister les classes disponibles (OPEN)", description = "Accessible à tous. Si étudiant connecté, retourne son statut d'inscription.")
     @GetMapping
     @PreAuthorize("permitAll()")
-    public ResponseEntity<ApiResponse<List<CourseClassResponse>>> getAllOpenClasses(Authentication authentication) {
-        UUID userId = null;
-        if (authentication != null && authentication.isAuthenticated()) {
-            userId = ((User) authentication.getPrincipal()).getId();
-        }
+    public ResponseEntity<ApiResponse<List<CourseClassResponse>>> getAllOpenClasses(@AuthenticationPrincipal User user) {
+        UUID userId = user != null ? user.getId() : null;
         List<CourseClassResponse> classes = courseClassService.getAllOpenClasses(userId);
         return ResponseEntity.ok(ApiResponse.success("Classes disponibles récupérées", classes));
     }
@@ -180,11 +170,8 @@ public class CourseClassController {
     @PreAuthorize("permitAll()")
     public ResponseEntity<ApiResponse<CourseClassResponse>> getClassById(
             @PathVariable Long classId,
-            Authentication authentication) {
-        UUID userId = null;
-        if (authentication != null && authentication.isAuthenticated()) {
-            userId = ((User) authentication.getPrincipal()).getId();
-        }
+            @AuthenticationPrincipal User user) {
+        UUID userId = user != null ? user.getId() : null;
         CourseClassResponse response = courseClassService.getClassById(classId, userId);
         return ResponseEntity.ok(ApiResponse.success("Classe récupérée avec succès", response));
     }

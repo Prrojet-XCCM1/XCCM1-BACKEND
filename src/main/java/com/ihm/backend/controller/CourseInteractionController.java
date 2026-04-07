@@ -14,6 +14,7 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.Authentication;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
@@ -46,8 +47,7 @@ public class CourseInteractionController {
     @PreAuthorize("isAuthenticated()")
     public ResponseEntity<ApiResponse<CourseLikeResponse>> toggleLike(
             @PathVariable Integer courseId,
-            Authentication authentication) throws Exception {
-        User user = (User) authentication.getPrincipal();
+            @AuthenticationPrincipal User user) throws Exception {
         CourseLikeResponse response = interactionService.toggleLike(courseId, user.getId());
         String message = response.isLiked() ? "Cours liké avec succès" : "Like retiré avec succès";
         return ResponseEntity.ok(ApiResponse.success(message, response));
@@ -60,8 +60,7 @@ public class CourseInteractionController {
     @PreAuthorize("isAuthenticated()")
     public ResponseEntity<ApiResponse<CourseLikeResponse>> getLikeStatus(
             @PathVariable Integer courseId,
-            Authentication authentication) {
-        User user = (User) authentication.getPrincipal();
+            @AuthenticationPrincipal User user) {
         CourseLikeResponse response = interactionService.getLikeStatus(courseId, user.getId());
         return ResponseEntity.ok(ApiResponse.success("Statut du like récupéré", response));
     }
@@ -78,8 +77,7 @@ public class CourseInteractionController {
     @PreAuthorize("isAuthenticated()")
     public ResponseEntity<ApiResponse<CourseViewResponse>> recordView(
             @PathVariable Integer courseId,
-            Authentication authentication) throws Exception {
-        User user = (User) authentication.getPrincipal();
+            @AuthenticationPrincipal User user) throws Exception {
         CourseViewResponse response = interactionService.recordView(courseId, user.getId());
         String message = response.isRecorded() ? "Vue enregistrée" : "Vue déjà comptabilisée";
         return ResponseEntity.ok(ApiResponse.success(message, response));
@@ -101,6 +99,21 @@ public class CourseInteractionController {
     }
 
     /**
+     * Endpoint réservé à l'enseignant : récupère tous les commentaires des étudiants
+     * sur un cours dont il est l'auteur.
+     * GET /api/courses/{courseId}/interactions/teacher/comments
+     */
+    @GetMapping("/teacher/comments")
+    @PreAuthorize("hasRole('TEACHER')")
+    public ResponseEntity<ApiResponse<List<CourseCommentDTO>>> getCourseCommentsForTeacher(
+            @PathVariable Integer courseId,
+            @AuthenticationPrincipal User user) throws Exception {
+        List<CourseCommentDTO> comments = interactionService.getCourseCommentsForTeacher(courseId, user.getId());
+        return ResponseEntity.ok(ApiResponse.success(
+                "Commentaires des étudiants récupérés (" + comments.size() + " au total)", comments));
+    }
+
+    /**
      * Ajoute un commentaire sur un cours.
      * Accessible à tout utilisateur authentifié (étudiant ou enseignant).
      */
@@ -109,8 +122,7 @@ public class CourseInteractionController {
     public ResponseEntity<ApiResponse<CourseCommentDTO>> addComment(
             @PathVariable Integer courseId,
             @Valid @RequestBody CourseCommentRequest request,
-            Authentication authentication) throws Exception {
-        User user = (User) authentication.getPrincipal();
+            @AuthenticationPrincipal User user) throws Exception {
         CourseCommentDTO comment = interactionService.addComment(courseId, user.getId(), request.getContent());
         return ResponseEntity.status(HttpStatus.CREATED)
                 .body(ApiResponse.created("Commentaire ajouté", comment));
@@ -126,8 +138,7 @@ public class CourseInteractionController {
             @PathVariable Integer courseId,
             @PathVariable Long commentId,
             @Valid @RequestBody CourseCommentRequest request,
-            Authentication authentication) throws Exception {
-        User user = (User) authentication.getPrincipal();
+            @AuthenticationPrincipal User user) throws Exception {
         CourseCommentDTO updated = interactionService.updateComment(commentId, user.getId(), request.getContent());
         return ResponseEntity.ok(ApiResponse.success("Commentaire mis à jour", updated));
     }
@@ -141,8 +152,7 @@ public class CourseInteractionController {
     public ResponseEntity<ApiResponse<Void>> deleteComment(
             @PathVariable Integer courseId,
             @PathVariable Long commentId,
-            Authentication authentication) throws Exception {
-        User user = (User) authentication.getPrincipal();
+            @AuthenticationPrincipal User user) throws Exception {
         interactionService.deleteComment(commentId, user.getId());
         return ResponseEntity.ok(ApiResponse.success("Commentaire supprimé", null));
     }
