@@ -13,6 +13,7 @@ import com.ihm.backend.exception.ResourceNotFoundException;
 import com.ihm.backend.repository.ClassEnrollmentRepository;
 import com.ihm.backend.repository.CourseClassRepository;
 import com.ihm.backend.repository.CourseRepository;
+import com.ihm.backend.repository.EnrollmentRepository;
 import com.ihm.backend.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -39,6 +40,7 @@ public class CourseClassService {
     private final CourseRepository courseRepository;
     private final UserRepository userRepository;
     private final ClassEnrollmentRepository enrollmentRepository;
+    private final EnrollmentRepository courseEnrollmentRepository;
 
     // ─── CRUD ────────────────────────────────────────────────────────────────
 
@@ -234,13 +236,16 @@ public class CourseClassService {
     }
 
     /**
-     * Construit la réponse avec les compteurs d'inscrits
+     * Construit la réponse avec les compteurs d'inscrits.
+     * participantCount = somme totale des participants dans tous les cours de la classe (sans distinction).
      */
     private CourseClassResponse buildResponse(CourseClass entity, ClassEnrollmentDTO myEnrollment) {
-        long studentCount = enrollmentRepository.countByCourseClass_IdAndStatus(entity.getId(), EnrollmentStatus.APPROVED);
+        // Participants = ensemble de toutes les inscriptions pour chaque cours de cette classe
+        long participantCount = courseEnrollmentRepository.countTotalParticipantsByClassId(entity.getId());
+        // Demandes en attente (inscription à la classe)
         long pendingCount = enrollmentRepository.countByCourseClass_IdAndStatus(entity.getId(), EnrollmentStatus.PENDING);
 
-        CourseClassResponse response = CourseClassResponse.fromEntity(entity, studentCount, pendingCount);
+        CourseClassResponse response = CourseClassResponse.fromEntity(entity, participantCount, pendingCount);
         response.setMyEnrollment(myEnrollment);
         return response;
     }
