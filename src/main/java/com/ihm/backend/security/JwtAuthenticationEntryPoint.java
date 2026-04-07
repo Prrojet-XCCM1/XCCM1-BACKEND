@@ -3,7 +3,7 @@
 package com.ihm.backend.security;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.ihm.backend.domain.dto.response.ApiResponse;
+import com.ihm.backend.dto.response.ApiResponse;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import lombok.RequiredArgsConstructor;
@@ -23,17 +23,16 @@ public class JwtAuthenticationEntryPoint implements AuthenticationEntryPoint {
 
     @Override
     public void commence(HttpServletRequest request,
-                         HttpServletResponse response,
-                         AuthenticationException authException) throws IOException {
+            HttpServletResponse response,
+            AuthenticationException authException) throws IOException {
 
         response.setStatus(HttpServletResponse.SC_UNAUTHORIZED);
         response.setContentType(MediaType.APPLICATION_JSON_VALUE);
         response.setCharacterEncoding(StandardCharsets.UTF_8.name());
 
-        ApiResponse<Void> apiResponse = ApiResponse.<Void>unauthorized(
+        ApiResponse<Void> apiResponse = ApiResponse.unauthorized(
                 "Accès non autorisé",
-                authException != null ? authException.getMessage() : "Token manquant ou invalide"
-        );
+                authException != null ? authException.getMessage() : "Token manquant ou invalide");
 
         response.getWriter().write(objectMapper.writeValueAsString(apiResponse));
         response.getWriter().flush();

@@ -1,0 +1,41 @@
+services:
+  # The Spring Boot Backend
+  - type: web
+    name: xccm1-backend
+    runtime: docker
+    plan: free # Change to 'starter' or higher for production
+    envVars:
+      - key: SPRING_PROFILES_ACTIVE
+        value: prod
+      - key: PORT
+        value: 8080
+      - key: DB_HOST
+        fromDatabase:
+          name: xccm1-db
+          property: host
+      - key: DB_PORT
+        fromDatabase:
+          name: xccm1-db
+          property: port
+      - key: DB_NAME
+        fromDatabase:
+          name: xccm1-db
+          property: database
+      - key: DB_USERNAME
+        fromDatabase:
+          name: xccm1-db
+          property: user
+      - key: DB_PASSWORD
+        fromDatabase:
+          name: xccm1-db
+          property: password
+      - key: JWT_SECRET
+        generateValue: true # Generates a secure random value
+    healthCheckPath: /actuator/health
+
+databases:
+  # The PostgreSQL Database
+  - name: xccm1-db
+    databaseName: xccm1
+    user: xccm_user
+    plan: free # Change to 'starter' or higher for production

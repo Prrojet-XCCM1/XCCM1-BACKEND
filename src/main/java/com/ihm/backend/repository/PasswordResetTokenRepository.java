@@ -1,7 +1,7 @@
 // PasswordResetTokenRepository.java
 package com.ihm.backend.repository;
 
-import com.ihm.backend.domain.entity.PasswordResetToken;
+import com.ihm.backend.entity.PasswordResetToken;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.stereotype.Repository;
 
