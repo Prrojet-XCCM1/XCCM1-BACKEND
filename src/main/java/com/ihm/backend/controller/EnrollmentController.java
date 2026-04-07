@@ -9,6 +9,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.Authentication;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
@@ -29,8 +30,7 @@ public class EnrollmentController {
     @PreAuthorize("hasRole('STUDENT') or hasRole('TEACHER')")
     public ResponseEntity<ApiResponse<EnrollmentDTO>> enrollInCourse(
             @PathVariable Integer courseId,
-            Authentication authentication) throws Exception {
-        User user = (User) authentication.getPrincipal();
+            @AuthenticationPrincipal User user) throws Exception {
         EnrollmentDTO enrollment = enrollmentService.enrollUser(courseId, user.getId());
         return ResponseEntity.ok(ApiResponse.success("Enrôlement réussi", enrollment));
     }
@@ -40,8 +40,7 @@ public class EnrollmentController {
      */
     @GetMapping("/my-courses")
     @PreAuthorize("hasRole('STUDENT') or hasRole('TEACHER')")
-    public ResponseEntity<ApiResponse<List<EnrollmentDTO>>> getMyEnrollments(Authentication authentication) {
-        User user = (User) authentication.getPrincipal();
+    public ResponseEntity<ApiResponse<List<EnrollmentDTO>>> getMyEnrollments(@AuthenticationPrincipal User user) {
         List<EnrollmentDTO> enrollments = enrollmentService.getUserEnrollments(user.getId());
         return ResponseEntity.ok(ApiResponse.success("Enrôlements récupérés", enrollments));
     }
@@ -54,7 +53,7 @@ public class EnrollmentController {
     public ResponseEntity<ApiResponse<EnrollmentDTO>> updateProgress(
             @PathVariable Long enrollmentId,
             @RequestParam Double progress,
-            Authentication authentication) throws Exception {
+            @AuthenticationPrincipal User user) throws Exception {
         EnrollmentDTO updated = enrollmentService.updateProgress(enrollmentId, progress);
         return ResponseEntity.ok(ApiResponse.success("Progression mise à jour", updated));
     }
@@ -66,7 +65,7 @@ public class EnrollmentController {
     @PreAuthorize("hasRole('STUDENT') or hasRole('TEACHER')")
     public ResponseEntity<ApiResponse<EnrollmentDTO>> markAsCompleted(
             @PathVariable Long enrollmentId,
-            Authentication authentication) throws Exception {
+            @AuthenticationPrincipal User user) throws Exception {
         EnrollmentDTO completed = enrollmentService.markAsCompleted(enrollmentId);
         return ResponseEntity.ok(ApiResponse.success("Cours marqué comme complété", completed));
     }
@@ -78,8 +77,7 @@ public class EnrollmentController {
     @PreAuthorize("hasRole('STUDENT') or hasRole('TEACHER')")
     public ResponseEntity<ApiResponse<EnrollmentDTO>> getEnrollmentForCourse(
             @PathVariable Integer courseId,
-            Authentication authentication) {
-        User user = (User) authentication.getPrincipal();
+            @AuthenticationPrincipal User user) {
         EnrollmentDTO enrollment = enrollmentService.getEnrollmentForUser(courseId, user.getId());
 
         if (enrollment == null) {
@@ -98,8 +96,7 @@ public class EnrollmentController {
     public ResponseEntity<ApiResponse<EnrollmentDTO>> validateEnrollment(
             @PathVariable Long enrollmentId,
             @RequestParam com.ihm.backend.enums.EnrollmentStatus status,
-            Authentication authentication) throws Exception {
-        User teacher = (User) authentication.getPrincipal();
+            @AuthenticationPrincipal User teacher) throws Exception {
         EnrollmentDTO validated = enrollmentService.validateEnrollment(enrollmentId, status, teacher.getId());
         return ResponseEntity.ok(ApiResponse.success("Statut de l'enrôlement mis à jour", validated));
     }
@@ -109,8 +106,7 @@ public class EnrollmentController {
      */
     @GetMapping("/pending")
     @PreAuthorize("hasRole('TEACHER')")
-    public ResponseEntity<ApiResponse<List<EnrollmentDTO>>> getPendingEnrollments(Authentication authentication) {
-        User teacher = (User) authentication.getPrincipal();
+    public ResponseEntity<ApiResponse<List<EnrollmentDTO>>> getPendingEnrollments(@AuthenticationPrincipal User teacher) {
         List<EnrollmentDTO> pending = enrollmentService.getPendingEnrollmentsForTeacher(teacher.getId());
         return ResponseEntity.ok(ApiResponse.success("Enrôlements en attente récupérés", pending));
     }
@@ -122,8 +118,7 @@ public class EnrollmentController {
     @PreAuthorize("hasRole('STUDENT') or hasRole('TEACHER')")
     public ResponseEntity<ApiResponse<Void>> unenroll(
             @PathVariable Long enrollmentId,
-            Authentication authentication) throws Exception {
-        User user = (User) authentication.getPrincipal();
+            @AuthenticationPrincipal User user) throws Exception {
         enrollmentService.unenroll(enrollmentId, user.getId());
         return ResponseEntity.ok(ApiResponse.success("Désenrôlement réussi", null));
     }
@@ -135,8 +130,7 @@ public class EnrollmentController {
     @PreAuthorize("hasRole('STUDENT') or hasRole('TEACHER')")
     public ResponseEntity<ApiResponse<Void>> cancelPendingEnrollment(
             @PathVariable Long enrollmentId,
-            Authentication authentication) throws Exception {
-        User user = (User) authentication.getPrincipal();
+            @AuthenticationPrincipal User user) throws Exception {
         enrollmentService.cancelPendingEnrollment(enrollmentId, user.getId());
         return ResponseEntity.ok(ApiResponse.success("Demande d'enrôlement annulée", null));
     }

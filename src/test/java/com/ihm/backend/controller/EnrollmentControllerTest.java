@@ -116,6 +116,11 @@ class EnrollmentControllerTest {
                 user.getAuthorities()
         );
     }
+    
+    private void authenticateAs(User user) {
+        org.springframework.security.core.context.SecurityContextHolder.getContext()
+            .setAuthentication(auth(user));
+    }
 
     // =========================================================================
     // ENRÔLEMENT
@@ -131,8 +136,8 @@ class EnrollmentControllerTest {
             when(enrollmentService.enrollUser(eq(10), eq(studentUser.getId())))
                     .thenReturn(studentEnrollment);
 
-            mockMvc.perform(post("/api/enrollments/courses/10")
-                            .with(authentication(auth(studentUser))))
+            authenticateAs(studentUser);
+            mockMvc.perform(post("/api/enrollments/courses/10"))
                     .andDo(print())
                     .andExpect(status().isOk())
                     .andExpect(jsonPath("$.data.status").value("PENDING"))
@@ -145,8 +150,8 @@ class EnrollmentControllerTest {
             when(enrollmentService.enrollUser(eq(10), eq(studentUser.getId())))
                     .thenThrow(new IllegalStateException("Vous êtes déjà enrôlé à ce cours"));
 
-            mockMvc.perform(post("/api/enrollments/courses/10")
-                            .with(authentication(auth(studentUser))))
+            authenticateAs(studentUser);
+            mockMvc.perform(post("/api/enrollments/courses/10"))
                     .andDo(print())
                     .andExpect(status().isBadRequest())
                     .andExpect(jsonPath("$.success").value(false))
@@ -168,8 +173,8 @@ class EnrollmentControllerTest {
             when(enrollmentService.getUserEnrollments(studentUser.getId()))
                     .thenReturn(List.of(studentEnrollment));
 
-            mockMvc.perform(get("/api/enrollments/my-courses")
-                            .with(authentication(auth(studentUser))))
+            authenticateAs(studentUser);
+            mockMvc.perform(get("/api/enrollments/my-courses"))
                     .andDo(print())
                     .andExpect(status().isOk())
                     .andExpect(jsonPath("$.data[0].id").value(1));
@@ -190,8 +195,8 @@ class EnrollmentControllerTest {
             when(enrollmentService.getEnrollmentForUser(eq(10), eq(studentUser.getId())))
                     .thenReturn(studentEnrollment);
 
-            mockMvc.perform(get("/api/enrollments/courses/10")
-                            .with(authentication(auth(studentUser))))
+            authenticateAs(studentUser);
+            mockMvc.perform(get("/api/enrollments/courses/10"))
                     .andDo(print())
                     .andExpect(status().isOk())
                     .andExpect(jsonPath("$.message").value("Enrôlement trouvé"));
@@ -203,8 +208,8 @@ class EnrollmentControllerTest {
             when(enrollmentService.getEnrollmentForUser(eq(99), eq(studentUser.getId())))
                     .thenReturn(null);
 
-            mockMvc.perform(get("/api/enrollments/courses/99")
-                            .with(authentication(auth(studentUser))))
+            authenticateAs(studentUser);
+            mockMvc.perform(get("/api/enrollments/courses/99"))
                     .andDo(print())
                     .andExpect(status().isOk())
                     .andExpect(jsonPath("$.message").value("Non enrôlé"));
@@ -226,8 +231,8 @@ class EnrollmentControllerTest {
                     eq(1L), eq(EnrollmentStatus.APPROVED), eq(teacherUser.getId())))
                     .thenReturn(teacherEnrollment);
 
+            authenticateAs(teacherUser);
             mockMvc.perform(put("/api/enrollments/1/validate")
-                            .with(authentication(auth(teacherUser)))
                             .param("status", "APPROVED"))
                     .andDo(print())
                     .andExpect(status().isOk())
@@ -248,8 +253,8 @@ class EnrollmentControllerTest {
                     eq(1L), eq(EnrollmentStatus.REJECTED), eq(teacherUser.getId())))
                     .thenReturn(rejected);
 
+            authenticateAs(teacherUser);
             mockMvc.perform(put("/api/enrollments/1/validate")
-                            .with(authentication(auth(teacherUser)))
                             .param("status", "REJECTED"))
                     .andDo(print())
                     .andExpect(status().isOk())
@@ -270,8 +275,8 @@ class EnrollmentControllerTest {
         void unenroll_success() throws Exception {
             doNothing().when(enrollmentService).unenroll(eq(1L), eq(studentUser.getId()));
 
-            mockMvc.perform(delete("/api/enrollments/1")
-                            .with(authentication(auth(studentUser))))
+            authenticateAs(studentUser);
+            mockMvc.perform(delete("/api/enrollments/1"))
                     .andDo(print())
                     .andExpect(status().isOk())
                     .andExpect(jsonPath("$.message").value("Désenrôlement réussi"));
@@ -283,8 +288,8 @@ class EnrollmentControllerTest {
             doThrow(new ResourceNotFoundException("Enrôlement non trouvé"))
                     .when(enrollmentService).unenroll(eq(999L), any());
 
-            mockMvc.perform(delete("/api/enrollments/999")
-                            .with(authentication(auth(studentUser))))
+            authenticateAs(studentUser);
+            mockMvc.perform(delete("/api/enrollments/999"))
                     .andDo(print())
                     .andExpect(status().isNotFound())
                     .andExpect(jsonPath("$.success").value(false));

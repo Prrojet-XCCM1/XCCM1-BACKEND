@@ -19,7 +19,9 @@ public class AuthController {
     @PostMapping("/login")
     public ResponseEntity<ApiResponse<AuthenticationResponse>> login(
             @RequestBody AuthenticationRequest request) {
-        return ResponseEntity.ok(authService.authenticate(request));
+        ApiResponse<AuthenticationResponse> response = authService.authenticate(request);
+        int code = response.getCode() != 0 ? response.getCode() : 200;
+        return ResponseEntity.status(code).body(response);
     }
 
     @PostMapping("/register")

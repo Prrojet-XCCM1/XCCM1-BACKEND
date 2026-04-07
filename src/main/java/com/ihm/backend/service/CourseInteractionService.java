@@ -193,6 +193,24 @@ public class CourseInteractionService {
                 .collect(Collectors.toList());
     }
 
+    /**
+     * Récupère tous les commentaires des étudiants sur un cours, réservé à l'enseignant propriétaire.
+     * Vérifie que l'enseignant est bien l'auteur du cours avant de retourner les commentaires.
+     */
+    public List<CourseCommentDTO> getCourseCommentsForTeacher(Integer courseId, UUID teacherId) throws java.nio.file.AccessDeniedException {
+        Course course = getCourse(courseId);
+
+        if (!course.getAuthor().getId().equals(teacherId)) {
+            throw new java.nio.file.AccessDeniedException(
+                    "Seul l'enseignant auteur du cours peut consulter les commentaires depuis ce point d'accès");
+        }
+
+        return courseCommentRepository.findByCourse_IdOrderByCreatedAtDesc(courseId)
+                .stream()
+                .map(CourseCommentDTO::fromEntity)
+                .collect(Collectors.toList());
+    }
+
     // ============================================================
     //  Utilitaires privés
     // ============================================================
