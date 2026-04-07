@@ -12,6 +12,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.Authentication;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
@@ -41,8 +42,7 @@ public class ClassEnrollmentController {
     @PreAuthorize("hasRole('STUDENT')")
     public ResponseEntity<ApiResponse<ClassEnrollmentDTO>> enrollInClass(
             @PathVariable Long classId,
-            Authentication authentication) throws Exception {
-        User student = (User) authentication.getPrincipal();
+            @AuthenticationPrincipal User student) throws Exception {
         ClassEnrollmentDTO enrollment = enrollmentService.enrollInClass(classId, student.getId());
         return ResponseEntity.ok(ApiResponse.success("Demande d'inscription envoyée avec succès (en attente de validation)", enrollment));
     }
@@ -53,8 +53,7 @@ public class ClassEnrollmentController {
     @Operation(summary = "Mes inscriptions aux classes")
     @GetMapping("/my")
     @PreAuthorize("hasRole('STUDENT')")
-    public ResponseEntity<ApiResponse<List<ClassEnrollmentDTO>>> getMyEnrollments(Authentication authentication) {
-        User student = (User) authentication.getPrincipal();
+    public ResponseEntity<ApiResponse<List<ClassEnrollmentDTO>>> getMyEnrollments(@AuthenticationPrincipal User student) {
         List<ClassEnrollmentDTO> enrollments = enrollmentService.getMyEnrollments(student.getId());
         return ResponseEntity.ok(ApiResponse.success("Inscriptions récupérées", enrollments));
     }
@@ -67,8 +66,7 @@ public class ClassEnrollmentController {
     @PreAuthorize("hasRole('STUDENT')")
     public ResponseEntity<ApiResponse<ClassEnrollmentDTO>> getMyEnrollmentForClass(
             @PathVariable Long classId,
-            Authentication authentication) {
-        User student = (User) authentication.getPrincipal();
+            @AuthenticationPrincipal User student) {
         ClassEnrollmentDTO enrollment = enrollmentService.getEnrollmentForClass(classId, student.getId());
         if (enrollment == null) {
             return ResponseEntity.ok(ApiResponse.success("Non inscrit à cette classe", null));
@@ -84,8 +82,7 @@ public class ClassEnrollmentController {
     @PreAuthorize("hasRole('STUDENT')")
     public ResponseEntity<ApiResponse<Void>> unenrollFromClass(
             @PathVariable Long enrollmentId,
-            Authentication authentication) throws Exception {
-        User student = (User) authentication.getPrincipal();
+            @AuthenticationPrincipal User student) throws Exception {
         enrollmentService.unenrollFromClass(enrollmentId, student.getId());
         return ResponseEntity.ok(ApiResponse.success("Désinscription réussie", null));
     }
@@ -98,8 +95,7 @@ public class ClassEnrollmentController {
     @PreAuthorize("hasRole('STUDENT')")
     public ResponseEntity<ApiResponse<Void>> cancelPendingEnrollment(
             @PathVariable Long enrollmentId,
-            Authentication authentication) throws Exception {
-        User student = (User) authentication.getPrincipal();
+            @AuthenticationPrincipal User student) throws Exception {
         enrollmentService.cancelPendingEnrollment(enrollmentId, student.getId());
         return ResponseEntity.ok(ApiResponse.success("Demande d'inscription annulée", null));
     }
@@ -112,8 +108,7 @@ public class ClassEnrollmentController {
     @Operation(summary = "Demandes d'inscription en attente (enseignant)")
     @GetMapping("/pending")
     @PreAuthorize("hasRole('TEACHER')")
-    public ResponseEntity<ApiResponse<List<ClassEnrollmentDTO>>> getPendingEnrollments(Authentication authentication) {
-        User teacher = (User) authentication.getPrincipal();
+    public ResponseEntity<ApiResponse<List<ClassEnrollmentDTO>>> getPendingEnrollments(@AuthenticationPrincipal User teacher) {
         List<ClassEnrollmentDTO> pending = enrollmentService.getPendingForTeacher(teacher.getId());
         return ResponseEntity.ok(ApiResponse.success("Demandes en attente récupérées", pending));
     }
@@ -126,8 +121,7 @@ public class ClassEnrollmentController {
     @PreAuthorize("hasRole('TEACHER')")
     public ResponseEntity<ApiResponse<List<ClassEnrollmentDTO>>> getClassEnrollments(
             @PathVariable Long classId,
-            Authentication authentication) throws Exception {
-        User teacher = (User) authentication.getPrincipal();
+            @AuthenticationPrincipal User teacher) throws Exception {
         List<ClassEnrollmentDTO> enrollments = enrollmentService.getClassEnrollments(classId, teacher.getId());
         return ResponseEntity.ok(ApiResponse.success("Inscrits de la classe récupérés", enrollments));
     }
@@ -143,8 +137,7 @@ public class ClassEnrollmentController {
     public ResponseEntity<ApiResponse<ClassEnrollmentDTO>> validateEnrollment(
             @PathVariable Long enrollmentId,
             @RequestParam EnrollmentStatus status,
-            Authentication authentication) throws Exception {
-        User teacher = (User) authentication.getPrincipal();
+            @AuthenticationPrincipal User teacher) throws Exception {
         ClassEnrollmentDTO updated = enrollmentService.validateEnrollment(enrollmentId, status, teacher.getId());
         String message = status == EnrollmentStatus.APPROVED
                 ? "Étudiant validé avec succès"
