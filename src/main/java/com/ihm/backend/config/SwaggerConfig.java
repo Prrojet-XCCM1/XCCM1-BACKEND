@@ -17,8 +17,8 @@ import java.util.List;
 @Configuration
 public class SwaggerConfig {
 
-    @Value("${IP_ADDRESS:http://localhost:8082}")
-    private String ipAddress;
+    @Value("${app.swagger.production-url}")
+    private String productionUrl;
 
     @Bean
     public OpenAPI customOpenAPI() {
@@ -44,7 +44,7 @@ public class SwaggerConfig {
                             .url("http://localhost:8082")
                             .description("Serveur de Développement"),
                     new Server()
-                            .url(ipAddress)
+                            .url(productionUrl)
                             .description("Serveur de Production")
             ))
             .addSecurityItem(new SecurityRequirement().addList("bearerAuth"))
