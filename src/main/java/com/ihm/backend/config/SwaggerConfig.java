@@ -8,6 +8,7 @@ import io.swagger.v3.oas.models.servers.Server;
 import io.swagger.v3.oas.models.security.SecurityRequirement;
 import io.swagger.v3.oas.models.security.SecurityScheme;
 import io.swagger.v3.oas.models.Components;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 
@@ -15,6 +16,9 @@ import java.util.List;
 
 @Configuration
 public class SwaggerConfig {
+
+    @Value("${app.swagger.production-url}")
+    private String productionUrl;
 
     @Bean
     public OpenAPI customOpenAPI() {
@@ -40,7 +44,7 @@ public class SwaggerConfig {
                             .url("http://localhost:8082")
                             .description("Serveur de Développement"),
                     new Server()
-                            .url("https://xccm1-backend-eews.onrender.com")
+                            .url(productionUrl)
                             .description("Serveur de Production")
             ))
             .addSecurityItem(new SecurityRequirement().addList("bearerAuth"))
