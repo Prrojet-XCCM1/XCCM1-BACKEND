@@ -41,6 +41,11 @@ public class CourseClassService {
     private final UserRepository userRepository;
     private final ClassEnrollmentRepository enrollmentRepository;
     private final EnrollmentRepository courseEnrollmentRepository;
+    private final com.ihm.backend.repository.CourseClassSearchRepository classSearchRepository;
+
+    public List<CourseClass> searchClasses(String query) {
+        return (List<CourseClass>) classSearchRepository.findAll();
+    }
 
     // ─── CRUD ────────────────────────────────────────────────────────────────
 
@@ -63,6 +68,7 @@ public class CourseClassService {
                 .build();
 
         CourseClass saved = classRepository.save(entity);
+        classSearchRepository.save(saved);
         log.info("Classe de cours créée: id={}, name={}, teacher={}", saved.getId(), saved.getName(), teacherId);
         return buildResponse(saved, null);
     }
@@ -113,6 +119,7 @@ public class CourseClassService {
         if (request.getMaxStudents() != null)  entity.setMaxStudents(request.getMaxStudents());
 
         CourseClass saved = classRepository.save(entity);
+        classSearchRepository.save(saved);
         log.info("Classe mise à jour: id={}", classId);
         return buildResponse(saved, null);
     }
@@ -131,6 +138,7 @@ public class CourseClassService {
         }
 
         classRepository.delete(entity);
+        classSearchRepository.delete(entity);
         log.info("Classe supprimée: id={}", classId);
     }
 

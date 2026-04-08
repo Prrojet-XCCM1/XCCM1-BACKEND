@@ -22,6 +22,9 @@ import lombok.NoArgsConstructor;
 import lombok.Setter;
 import org.hibernate.annotations.JdbcTypeCode;
 import org.hibernate.type.SqlTypes;
+import org.springframework.data.elasticsearch.annotations.Document;
+import org.springframework.data.elasticsearch.annotations.Field;
+import org.springframework.data.elasticsearch.annotations.FieldType;
 
 @Getter
 @Setter
@@ -29,12 +32,20 @@ import org.hibernate.type.SqlTypes;
 @AllArgsConstructor
 @Builder
 @Entity
+@Document(indexName = "courses")
 public class Course {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
+    @org.springframework.data.annotation.Id
     private Integer id;
+    
+    @Field(type = FieldType.Text, analyzer = "french")
     private String title;
+    
+    @Field(type = FieldType.Keyword)
     private String category;
+    
+    @Field(type = FieldType.Text, analyzer = "french")
     private String description;
     @Enumerated(value = EnumType.STRING)
     private CourseStatus status;

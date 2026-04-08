@@ -5,6 +5,9 @@ import jakarta.persistence.*;
 import lombok.*;
 import org.hibernate.annotations.CreationTimestamp;
 import org.hibernate.annotations.UpdateTimestamp;
+import org.springframework.data.elasticsearch.annotations.Document;
+import org.springframework.data.elasticsearch.annotations.Field;
+import org.springframework.data.elasticsearch.annotations.FieldType;
 
 import java.time.LocalDateTime;
 import java.util.ArrayList;
@@ -22,21 +25,26 @@ import java.util.List;
 @Builder
 @Entity
 @Table(name = "course_classes")
+@Document(indexName = "course_classes")
 public class CourseClass {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
+    @org.springframework.data.annotation.Id
     private Long id;
 
     @Column(nullable = false)
+    @Field(type = FieldType.Text, analyzer = "french")
     private String name;
 
     @Column(columnDefinition = "TEXT")
+    @Field(type = FieldType.Text, analyzer = "french")
     private String description;
 
     /**
      * Thématique de la classe (ex: "Programmation", "Design", "Data Science")
      */
+    @Field(type = FieldType.Keyword)
     private String theme;
 
     @Column(name = "cover_image")

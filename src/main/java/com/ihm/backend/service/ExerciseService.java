@@ -32,6 +32,11 @@ public class ExerciseService {
     private final EnrollmentRepository enrollmentRepository;
     private final ExerciseMapper exerciseMapper;
     private final StudentExerciseMapper studentExerciseMapper;
+    private final com.ihm.backend.repository.ExerciseSearchRepository exerciseSearchRepository;
+
+    public List<Exercise> searchExercises(String query) {
+        return (List<Exercise>) exerciseSearchRepository.findAll();
+    }
 
     // --- Teacher Operations ---
 
@@ -47,8 +52,8 @@ public class ExerciseService {
 
         Exercise exercise = exerciseMapper.toEntity(request);
         exercise.setCourse(course);
-
         Exercise savedExercise = exerciseRepository.save(exercise);
+        exerciseSearchRepository.save(savedExercise);
         return ApiResponse.created("Exercice créé avec succès", exerciseMapper.toResponse(savedExercise));
     }
 
@@ -64,6 +69,7 @@ public class ExerciseService {
 
         exerciseMapper.updateEntityFromRequest(request, exercise);
         Exercise updatedExercise = exerciseRepository.save(exercise);
+        exerciseSearchRepository.save(updatedExercise);
         return ApiResponse.success("Exercice mis à jour", exerciseMapper.toResponse(updatedExercise));
     }
 
@@ -77,6 +83,7 @@ public class ExerciseService {
         }
 
         exerciseRepository.delete(exercise);
+        exerciseSearchRepository.delete(exercise);
         return ApiResponse.success("Exercice supprimé");
     }
 

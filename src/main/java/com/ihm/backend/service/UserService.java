@@ -33,4 +33,6 @@ public interface UserService {
     List<StudentResponse> getAllStudents();
     
     List<TeacherResponse> getAllTeachers();
+
+    Page<User> searchUsers(String query, Pageable pageable);
 }

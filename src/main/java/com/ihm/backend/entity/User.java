@@ -8,6 +8,9 @@ import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
+import org.springframework.data.elasticsearch.annotations.Document;
+import org.springframework.data.elasticsearch.annotations.Field;
+import org.springframework.data.elasticsearch.annotations.FieldType;
 import org.springframework.security.core.GrantedAuthority;
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.security.core.userdetails.UserDetails;
@@ -23,6 +26,7 @@ import java.util.UUID;
 @AllArgsConstructor
 @Entity
 @Table(name = "users")
+@Document(indexName = "users")
 public class User implements UserDetails {
 
     @Id
@@ -31,6 +35,7 @@ public class User implements UserDetails {
     private UUID id;
 
     @Column(nullable = false, unique = true)
+    @Field(type = FieldType.Keyword)
     private String email;
 
     @Column(nullable = false)
@@ -42,19 +47,23 @@ public class User implements UserDetails {
     private UserRole role;
 
     @Column(name = "first_name", nullable = false)
+    @Field(type = FieldType.Text, analyzer = "french")
     private String firstName;
 
     @Column(name = "last_name", nullable = false)
+    @Field(type = FieldType.Text, analyzer = "french")
     private String lastName;
 
     @Column(name = "photo_url")
     private String photoUrl;
 
+    @Field(type = FieldType.Text, analyzer = "french")
     private String city;
 
     private String university;
 
     // Champ spécifique aux étudiants
+    @Field(type = FieldType.Text, analyzer = "french")
     private String specialization;
 
     // Champs spécifiques aux enseignants

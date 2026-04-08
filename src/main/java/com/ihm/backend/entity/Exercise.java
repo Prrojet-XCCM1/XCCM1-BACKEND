@@ -9,6 +9,9 @@ import org.hibernate.annotations.CreationTimestamp;
 
 import org.hibernate.annotations.JdbcTypeCode;
 import org.hibernate.type.SqlTypes;
+import org.springframework.data.elasticsearch.annotations.Document;
+import org.springframework.data.elasticsearch.annotations.Field;
+import org.springframework.data.elasticsearch.annotations.FieldType;
 
 import java.time.LocalDateTime;
 
@@ -18,10 +21,12 @@ import java.time.LocalDateTime;
 @AllArgsConstructor
 @Entity
 @Table(name = "exercises")
+@Document(indexName = "exercises")
 public class Exercise {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
+    @org.springframework.data.annotation.Id
     private Integer id;
 
     @ManyToOne
@@ -29,9 +34,11 @@ public class Exercise {
     private Course course;
 
     @Column(nullable = false)
+    @Field(type = FieldType.Text, analyzer = "french")
     private String title;
 
     @Column(columnDefinition = "TEXT")
+    @Field(type = FieldType.Text, analyzer = "french")
     private String description;
 
     @Column(name = "max_score", nullable = false)
