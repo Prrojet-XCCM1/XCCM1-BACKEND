@@ -24,7 +24,7 @@ import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
 import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
-import org.springframework.boot.test.mock.mockito.MockBean;
+import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.context.annotation.Import;
 import org.springframework.http.MediaType;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
@@ -54,18 +54,18 @@ class TeacherControllerTest {
     @Autowired
     private MockMvc mockMvc;
 
-    @MockBean
+    @MockitoBean
     private TeacherStatsService teacherStatsService;
 
-    @MockBean
+    @MockitoBean
     private ExerciseService exerciseService;
 
     // Mocks requis pour charger le contexte d'application minimal (SecurityConfig)
-    @MockBean
+    @MockitoBean
     private JwtAuthenticationFilter jwtAuthenticationFilter;
-    @MockBean
+    @MockitoBean
     private JwtAuthenticationEntryPoint jwtAuthenticationEntryPoint;
-    @MockBean
+    @MockitoBean
     private CustomAccessDeniedHandler customAccessDeniedHandler;
 
     @Autowired
