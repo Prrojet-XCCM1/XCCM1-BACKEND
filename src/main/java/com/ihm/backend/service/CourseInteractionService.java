@@ -182,6 +182,7 @@ public class CourseInteractionService {
     /**
      * Récupère tous les commentaires d'un cours, triés du plus récent au plus ancien.
      */
+    @Transactional(readOnly = true)
     public List<CourseCommentDTO> getComments(Integer courseId) {
         // Vérifie que le cours existe
         if (!courseRepository.existsById(courseId)) {
@@ -197,6 +198,7 @@ public class CourseInteractionService {
      * Récupère tous les commentaires des étudiants sur un cours, réservé à l'enseignant propriétaire.
      * Vérifie que l'enseignant est bien l'auteur du cours avant de retourner les commentaires.
      */
+    @Transactional(readOnly = true)
     public List<CourseCommentDTO> getCourseCommentsForTeacher(Integer courseId, UUID teacherId) throws java.nio.file.AccessDeniedException {
         Course course = getCourse(courseId);
 

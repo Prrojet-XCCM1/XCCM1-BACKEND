@@ -3,8 +3,6 @@ package com.ihm.backend.repository;
 
 import com.ihm.backend.entity.User;
 import com.ihm.backend.enums.UserRole;
-import org.springframework.data.domain.Page;
-import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.stereotype.Repository;
 

@@ -105,7 +105,7 @@ public class CourseService {
         return courseMapper.toResponse(course);
     }
 
-    public List<CourseResponse> getCoursesByStatusForAuthor(Integer authorId, CourseStatus courseStatus)
+    public List<CourseResponse> getCoursesByStatusForAuthor(UUID authorId, CourseStatus courseStatus)
             throws Exception {
         List<Course> courses = courseRepository.findByStatus(courseStatus);
         List<Course> result = courses.stream().filter(course -> course.getAuthor().getId().equals(authorId))
