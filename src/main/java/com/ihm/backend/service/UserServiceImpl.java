@@ -6,6 +6,7 @@ import com.ihm.backend.entity.User;
 import com.ihm.backend.enums.UserRole;
 import com.ihm.backend.exception.ResourceNotFoundException;
 import com.ihm.backend.repository.UserRepository;
+import com.ihm.backend.repository.elasticsearch.UserSearchRepository;
 import com.ihm.backend.service.UserService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.core.Authentication;
@@ -26,7 +27,7 @@ import java.util.stream.Collectors;
 public class UserServiceImpl implements UserService {
 
     private final UserRepository userRepository;
-    private final com.ihm.backend.repository.UserSearchRepository userSearchRepository;
+    private final UserSearchRepository userSearchRepository;
 
     @Override
     public org.springframework.data.domain.Page<User> searchUsers(String query, org.springframework.data.domain.Pageable pageable) {

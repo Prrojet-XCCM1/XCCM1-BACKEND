@@ -40,7 +40,7 @@ public class CourseClassService {
     private final UserRepository userRepository;
     private final ClassEnrollmentRepository enrollmentRepository;
     private final EnrollmentRepository courseEnrollmentRepository;
-    private final com.ihm.backend.repository.CourseClassSearchRepository classSearchRepository;
+    private final com.ihm.backend.repository.elasticsearch.CourseClassSearchRepository classSearchRepository;
 
     public List<CourseClass> searchClasses(String query) {
         return (List<CourseClass>) classSearchRepository.findAll();

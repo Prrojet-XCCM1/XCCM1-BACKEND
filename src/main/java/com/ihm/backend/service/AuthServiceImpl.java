@@ -6,6 +6,7 @@ import com.ihm.backend.entity.*;
 import com.ihm.backend.enums.UserRole;
 import com.ihm.backend.exception.*;
 import com.ihm.backend.repository.*;
+import com.ihm.backend.repository.elasticsearch.UserSearchRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.security.authentication.*;
@@ -29,7 +30,7 @@ public class AuthServiceImpl implements AuthService {
     private final JwtService jwtService;
     private final AuthenticationManager authenticationManager;
     private final NotificationService notificationService;
-    private final com.ihm.backend.repository.UserSearchRepository userSearchRepository;
+    private final UserSearchRepository userSearchRepository;
 
     @Override
     public ApiResponse<AuthenticationResponse> authenticate(AuthenticationRequest request) {

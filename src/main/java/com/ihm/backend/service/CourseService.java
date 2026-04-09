@@ -41,7 +41,7 @@ public class CourseService {
     @Autowired
     private NotificationService notificationService;
     @Autowired
-    private com.ihm.backend.repository.CourseSearchRepository courseSearchRepository;
+    private com.ihm.backend.repository.elasticsearch.CourseSearchRepository courseSearchRepository;
 
     public List<Course> searchCourses(String query) {
         // En réalité on utiliserait une recherche Elasticsearch ici

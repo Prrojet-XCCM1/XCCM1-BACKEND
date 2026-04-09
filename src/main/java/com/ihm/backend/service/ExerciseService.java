@@ -32,7 +32,7 @@ public class ExerciseService {
     private final EnrollmentRepository enrollmentRepository;
     private final ExerciseMapper exerciseMapper;
     private final StudentExerciseMapper studentExerciseMapper;
-    private final com.ihm.backend.repository.ExerciseSearchRepository exerciseSearchRepository;
+    private final com.ihm.backend.repository.elasticsearch.ExerciseSearchRepository exerciseSearchRepository;
 
     public List<Exercise> searchExercises(String query) {
         return (List<Exercise>) exerciseSearchRepository.findAll();

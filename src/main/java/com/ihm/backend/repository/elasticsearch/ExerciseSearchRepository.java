@@ -1,4 +1,4 @@
-package com.ihm.backend.repository;
+package com.ihm.backend.repository.elasticsearch;
 
 import com.ihm.backend.entity.Exercise;
 import org.springframework.data.elasticsearch.repository.ElasticsearchRepository;
