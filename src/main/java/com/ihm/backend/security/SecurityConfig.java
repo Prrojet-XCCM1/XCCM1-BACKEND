@@ -16,7 +16,8 @@ import org.springframework.web.cors.CorsConfiguration;
 import org.springframework.web.cors.CorsConfigurationSource;
 import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
 
-import com.ihm.backend.security.JwtAuthenticationFilter;
+import com.ihm.backend.repository.jpa.UserRepository;
+import com.ihm.backend.service.JwtService;
 
 import java.util.Arrays;
 import java.util.List;
@@ -144,7 +145,7 @@ public class SecurityConfig {
 
         @Bean
         public org.springframework.security.core.userdetails.UserDetailsService userDetailsService(
-                        com.ihm.backend.repository.UserRepository repository) {
+                        UserRepository repository) {
                 return username -> repository.findByEmail(username)
                                 .orElseThrow(() -> new org.springframework.security.core.userdetails.UsernameNotFoundException(
                                                 "Utilisateur non trouvé"));

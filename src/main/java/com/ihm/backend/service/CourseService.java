@@ -18,9 +18,9 @@ import com.ihm.backend.dto.request.CourseCreateRequest;
 import com.ihm.backend.dto.request.CourseUpdateRequest;
 import com.ihm.backend.exception.ResourceNotFoundException;
 import com.ihm.backend.mappers.CourseMapper;
-import com.ihm.backend.repository.CourseRepository;
-import com.ihm.backend.repository.EnrollmentRepository;
-import com.ihm.backend.repository.UserRepository;
+import com.ihm.backend.repository.jpa.CourseRepository;
+import com.ihm.backend.repository.jpa.EnrollmentRepository;
+import com.ihm.backend.repository.jpa.UserRepository;
 
 
 

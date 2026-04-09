@@ -5,7 +5,7 @@ import com.ihm.backend.dto.response.*;
 import com.ihm.backend.entity.*;
 import com.ihm.backend.enums.UserRole;
 import com.ihm.backend.exception.*;
-import com.ihm.backend.repository.*;
+import com.ihm.backend.repository.jpa.*;
 import com.ihm.backend.repository.elasticsearch.UserSearchRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;

@@ -5,7 +5,7 @@ import com.ihm.backend.dto.response.TeacherResponse;
 import com.ihm.backend.entity.User;
 import com.ihm.backend.enums.UserRole;
 import com.ihm.backend.exception.ResourceNotFoundException;
-import com.ihm.backend.repository.UserRepository;
+import com.ihm.backend.repository.jpa.UserRepository;
 import com.ihm.backend.repository.elasticsearch.UserSearchRepository;
 import com.ihm.backend.service.UserService;
 import lombok.RequiredArgsConstructor;

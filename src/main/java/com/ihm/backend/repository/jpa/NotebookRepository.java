@@ -1,4 +1,4 @@
-package com.ihm.backend.repository;
+package com.ihm.backend.repository.jpa;
 
 import com.ihm.backend.entity.Notebook;
 import org.springframework.data.jpa.repository.JpaRepository;

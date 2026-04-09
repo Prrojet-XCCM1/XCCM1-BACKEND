@@ -5,7 +5,7 @@ import com.ihm.backend.dto.response.CourseLikeResponse;
 import com.ihm.backend.dto.response.CourseViewResponse;
 import com.ihm.backend.entity.*;
 import com.ihm.backend.exception.ResourceNotFoundException;
-import com.ihm.backend.repository.*;
+import com.ihm.backend.repository.jpa.*;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;

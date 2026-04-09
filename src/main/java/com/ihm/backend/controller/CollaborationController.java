@@ -2,7 +2,7 @@ package com.ihm.backend.controller;
 
 import com.ihm.backend.dto.websocket.CollaborationMessage;
 import com.ihm.backend.entity.Exercise;
-import com.ihm.backend.repository.ExerciseRepository;
+import com.ihm.backend.repository.jpa.ExerciseRepository;
 import com.ihm.backend.service.LockService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -16,7 +16,7 @@ import org.springframework.stereotype.Controller;
 
 import org.springframework.messaging.handler.annotation.MessageExceptionHandler;
 
-import com.ihm.backend.repository.EnrollmentRepository;
+import com.ihm.backend.repository.jpa.EnrollmentRepository;
 import com.ihm.backend.enums.EnrollmentStatus;
 import java.util.Optional;
 

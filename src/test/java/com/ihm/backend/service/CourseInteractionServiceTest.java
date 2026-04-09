@@ -7,7 +7,8 @@ import com.ihm.backend.entity.*;
 import com.ihm.backend.enums.CourseStatus;
 import com.ihm.backend.enums.UserRole;
 import com.ihm.backend.exception.ResourceNotFoundException;
-import com.ihm.backend.repository.*;
+
+import com.ihm.backend.repository.jpa.*;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
