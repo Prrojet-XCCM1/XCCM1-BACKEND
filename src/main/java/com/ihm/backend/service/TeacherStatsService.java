@@ -5,7 +5,7 @@ import com.ihm.backend.entity.Course;
 import com.ihm.backend.entity.Exercise;
 import com.ihm.backend.entity.StudentExercise;
 import com.ihm.backend.exception.ResourceNotFoundException;
-import com.ihm.backend.repository.*;
+import com.ihm.backend.repository.jpa.*;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.security.access.AccessDeniedException;

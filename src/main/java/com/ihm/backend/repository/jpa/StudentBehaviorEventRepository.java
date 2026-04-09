@@ -1,4 +1,4 @@
-package com.ihm.backend.repository;
+package com.ihm.backend.repository.jpa;
 
 import com.ihm.backend.entity.StudentBehaviorEvent;
 import com.ihm.backend.enums.BehaviorEventType;

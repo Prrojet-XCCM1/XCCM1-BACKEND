@@ -1,5 +1,5 @@
 // UserRepository.java
-package com.ihm.backend.repository;
+package com.ihm.backend.repository.jpa;
 
 import com.ihm.backend.entity.User;
 import com.ihm.backend.enums.UserRole;

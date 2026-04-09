@@ -5,7 +5,8 @@ import com.ihm.backend.dto.response.TeacherResponse;
 import com.ihm.backend.entity.User;
 import com.ihm.backend.enums.UserRole;
 import com.ihm.backend.exception.ResourceNotFoundException;
-import com.ihm.backend.repository.UserRepository;
+import com.ihm.backend.repository.jpa.UserRepository;
+import com.ihm.backend.repository.elasticsearch.UserSearchRepository;
 import com.ihm.backend.service.UserService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.core.Authentication;
@@ -26,6 +27,13 @@ import java.util.stream.Collectors;
 public class UserServiceImpl implements UserService {
 
     private final UserRepository userRepository;
+    private final UserSearchRepository userSearchRepository;
+
+    @Override
+    public org.springframework.data.domain.Page<User> searchUsers(String query, org.springframework.data.domain.Pageable pageable) {
+        // Recherche simple par mot-clé (on peut affiner avec des critères complexes)
+        return userSearchRepository.findAll(pageable); // Placeholder, on peut implémenter une recherche par texte
+    }
 
     @Override
     public List<User> getAllUsers() {
@@ -120,7 +128,9 @@ public class UserServiceImpl implements UserService {
         
         existingUser.setUpdatedAt(LocalDateTime.now());
         
-        return userRepository.save(existingUser);
+        User saved = userRepository.save(existingUser);
+        userSearchRepository.save(saved);
+        return saved;
     }
 
     @Override
@@ -130,6 +140,7 @@ public class UserServiceImpl implements UserService {
         user.setActive(false);
         user.setUpdatedAt(LocalDateTime.now());
         userRepository.save(user);
+        userSearchRepository.save(user);
     }
 
     @Override
@@ -139,6 +150,7 @@ public class UserServiceImpl implements UserService {
         user.setActive(true);
         user.setUpdatedAt(LocalDateTime.now());
         userRepository.save(user);
+        userSearchRepository.save(user);
     }
 
     @Override

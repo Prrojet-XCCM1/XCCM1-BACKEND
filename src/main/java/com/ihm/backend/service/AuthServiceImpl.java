@@ -5,7 +5,8 @@ import com.ihm.backend.dto.response.*;
 import com.ihm.backend.entity.*;
 import com.ihm.backend.enums.UserRole;
 import com.ihm.backend.exception.*;
-import com.ihm.backend.repository.*;
+import com.ihm.backend.repository.jpa.*;
+import com.ihm.backend.repository.elasticsearch.UserSearchRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.security.authentication.*;
@@ -28,8 +29,8 @@ public class AuthServiceImpl implements AuthService {
     private final PasswordEncoder passwordEncoder;
     private final JwtService jwtService;
     private final AuthenticationManager authenticationManager;
-    private final EmailService emailService;
     private final NotificationService notificationService;
+    private final UserSearchRepository userSearchRepository;
 
     @Override
     public ApiResponse<AuthenticationResponse> authenticate(AuthenticationRequest request) {
@@ -86,6 +87,7 @@ public class AuthServiceImpl implements AuthService {
 
         // Sauvegarde
         User saved = userRepository.save(user);
+        userSearchRepository.save(saved);
         log.info("Utilisateur créé: {} avec le rôle {}", saved.getEmail(), saved.getRole());
 
         // Envoi email de bienvenue
@@ -144,7 +146,7 @@ public class AuthServiceImpl implements AuthService {
 
         tokenRepository.save(resetToken);
 
-        emailService.sendPasswordResetEmail(user.getEmail(), token);
+        notificationService.sendPasswordResetEmail(user, token);
 
         return ApiResponse.success("Email de réinitialisation envoyé");
     }
@@ -210,6 +212,7 @@ public class AuthServiceImpl implements AuthService {
                 .build();
 
         User saved = userRepository.save(student);
+        userSearchRepository.save(saved);
         log.info("Étudiant créé: {}", saved.getEmail());
 
         // Envoi email de bienvenue
@@ -264,6 +267,7 @@ public class AuthServiceImpl implements AuthService {
                 .build();
 
         User saved = userRepository.save(teacher);
+        userSearchRepository.save(saved);
         log.info("Enseignant créé: {}", saved.getEmail());
 
         // Envoi email de bienvenue

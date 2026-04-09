@@ -10,11 +10,11 @@ import com.ihm.backend.entity.User;
 import com.ihm.backend.enums.ClassStatus;
 import com.ihm.backend.enums.EnrollmentStatus;
 import com.ihm.backend.exception.ResourceNotFoundException;
-import com.ihm.backend.repository.ClassEnrollmentRepository;
-import com.ihm.backend.repository.CourseClassRepository;
-import com.ihm.backend.repository.CourseRepository;
-import com.ihm.backend.repository.EnrollmentRepository;
-import com.ihm.backend.repository.UserRepository;
+import com.ihm.backend.repository.jpa.ClassEnrollmentRepository;
+import com.ihm.backend.repository.jpa.CourseClassRepository;
+import com.ihm.backend.repository.jpa.CourseRepository;
+import com.ihm.backend.repository.jpa.EnrollmentRepository;
+import com.ihm.backend.repository.jpa.UserRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
@@ -40,6 +40,11 @@ public class CourseClassService {
     private final UserRepository userRepository;
     private final ClassEnrollmentRepository enrollmentRepository;
     private final EnrollmentRepository courseEnrollmentRepository;
+    private final com.ihm.backend.repository.elasticsearch.CourseClassSearchRepository classSearchRepository;
+
+    public List<CourseClass> searchClasses(String query) {
+        return (List<CourseClass>) classSearchRepository.findAll();
+    }
 
     // ─── CRUD ────────────────────────────────────────────────────────────────
 
@@ -62,6 +67,7 @@ public class CourseClassService {
                 .build();
 
         CourseClass saved = classRepository.save(entity);
+        classSearchRepository.save(saved);
         log.info("Classe de cours créée: id={}, name={}, teacher={}", saved.getId(), saved.getName(), teacherId);
         return buildResponse(saved, null);
     }
@@ -112,6 +118,7 @@ public class CourseClassService {
         if (request.getMaxStudents() != null)  entity.setMaxStudents(request.getMaxStudents());
 
         CourseClass saved = classRepository.save(entity);
+        classSearchRepository.save(saved);
         log.info("Classe mise à jour: id={}", classId);
         return buildResponse(saved, null);
     }
@@ -130,6 +137,7 @@ public class CourseClassService {
         }
 
         classRepository.delete(entity);
+        classSearchRepository.delete(entity);
         log.info("Classe supprimée: id={}", classId);
     }
 

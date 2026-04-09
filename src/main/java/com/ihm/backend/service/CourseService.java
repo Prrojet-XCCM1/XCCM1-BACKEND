@@ -18,9 +18,9 @@ import com.ihm.backend.dto.request.CourseCreateRequest;
 import com.ihm.backend.dto.request.CourseUpdateRequest;
 import com.ihm.backend.exception.ResourceNotFoundException;
 import com.ihm.backend.mappers.CourseMapper;
-import com.ihm.backend.repository.CourseRepository;
-import com.ihm.backend.repository.EnrollmentRepository;
-import com.ihm.backend.repository.UserRepository;
+import com.ihm.backend.repository.jpa.CourseRepository;
+import com.ihm.backend.repository.jpa.EnrollmentRepository;
+import com.ihm.backend.repository.jpa.UserRepository;
 
 
 
@@ -40,6 +40,14 @@ public class CourseService {
     private EnrollmentRepository enrollmentRepository;
     @Autowired
     private NotificationService notificationService;
+    @Autowired
+    private com.ihm.backend.repository.elasticsearch.CourseSearchRepository courseSearchRepository;
+
+    public List<Course> searchCourses(String query) {
+        // En réalité on utiliserait une recherche Elasticsearch ici
+        // Pour l'instant on expose juste la capacité
+        return (List<Course>) courseSearchRepository.findAll();
+    }
 
     // create a course
     public CourseResponse createCourse(CourseCreateRequest dto, UUID authorId) throws Exception {
@@ -47,6 +55,7 @@ public class CourseService {
         User author = userRepository.findById(authorId).orElseThrow(() -> new Exception("Teacher does not exists"));
         course.setAuthor(author);
         course = courseRepository.save(course);
+        courseSearchRepository.save(course);
         return courseMapper.toResponse(course);
     }
     // get all courses for a particular author
@@ -64,8 +73,8 @@ public class CourseService {
 
         courseMapper.updateEntity(request, course);
         course = courseRepository.save(course);
+        courseSearchRepository.save(course);
         return courseMapper.toResponse(course);
-
     }
 
     // get all courses
@@ -78,6 +87,7 @@ public class CourseService {
     public void deleteCourse(Integer courseId) throws Exception {
         Course course = courseRepository.findById(courseId).orElseThrow(() -> new Exception("Course does not exist"));
         courseRepository.delete(course);
+        courseSearchRepository.delete(course);
     }
 
     // changeState of Course
@@ -86,6 +96,7 @@ public class CourseService {
                 .orElseThrow(() -> new Exception("Course does not exist"));
         course.setStatus(courseStatus);
         courseRepository.save(course);
+        courseSearchRepository.save(course);
 
         if (courseStatus == CourseStatus.PUBLISHED) {
             notificationService.sendCoursePublishedEmail(course.getAuthor(), course.getTitle());

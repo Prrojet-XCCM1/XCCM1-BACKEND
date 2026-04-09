@@ -2,7 +2,7 @@ package com.ihm.backend.config;
 
 import com.ihm.backend.entity.User;
 import com.ihm.backend.enums.UserRole;
-import com.ihm.backend.repository.UserRepository;
+import com.ihm.backend.repository.jpa.UserRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.boot.CommandLineRunner;
