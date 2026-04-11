@@ -42,6 +42,8 @@ public class CourseService {
     private NotificationService notificationService;
     @Autowired
     private com.ihm.backend.repository.elasticsearch.CourseSearchRepository courseSearchRepository;
+    @Autowired
+    private LLMIndexingService llmIndexingService;
 
     public List<Course> searchCourses(String query) {
         // En réalité on utiliserait une recherche Elasticsearch ici
@@ -100,6 +102,7 @@ public class CourseService {
 
         if (courseStatus == CourseStatus.PUBLISHED) {
             notificationService.sendCoursePublishedEmail(course.getAuthor(), course.getTitle());
+            llmIndexingService.indexCourse(course);
         }
 
         return courseMapper.toResponse(course);

@@ -33,6 +33,7 @@ public class ExerciseService {
     private final ExerciseMapper exerciseMapper;
     private final StudentExerciseMapper studentExerciseMapper;
     private final com.ihm.backend.repository.elasticsearch.ExerciseSearchRepository exerciseSearchRepository;
+    private final LLMIndexingService llmIndexingService;
 
     public List<Exercise> searchExercises(String query) {
         return (List<Exercise>) exerciseSearchRepository.findAll();
@@ -54,6 +55,10 @@ public class ExerciseService {
         exercise.setCourse(course);
         Exercise savedExercise = exerciseRepository.save(exercise);
         exerciseSearchRepository.save(savedExercise);
+        
+        // Trigger automated indexing for RAG
+        llmIndexingService.indexExercise(savedExercise);
+        
         return ApiResponse.created("Exercice créé avec succès", exerciseMapper.toResponse(savedExercise));
     }
 
@@ -122,25 +127,8 @@ public class ExerciseService {
 
         StudentExercise gradedSubmission = studentExerciseRepository.save(submission);
         
-        // Trigger LLM Evaluation
-        try {
-            org.springframework.web.client.RestTemplate restTemplate = new org.springframework.web.client.RestTemplate();
-            String llmServiceUrl = "http://localhost:8000/api/v1/knowledge/evaluate";
-            
-            java.util.Map<String, Object> requestBody = new java.util.HashMap<>();
-            requestBody.put("student_id", submission.getStudent().getId().toString());
-            requestBody.put("notion", submission.getExercise().getTitle());
-            
-            org.springframework.http.HttpHeaders headers = new org.springframework.http.HttpHeaders();
-            headers.setContentType(org.springframework.http.MediaType.APPLICATION_JSON);
-            
-            org.springframework.http.HttpEntity<java.util.Map<String, Object>> httpEntity = new org.springframework.http.HttpEntity<>(requestBody, headers);
-            
-            restTemplate.postForEntity(llmServiceUrl, httpEntity, String.class);
-            log.info("Successfully triggered LLM evaluation after grading for student {} on notion {}", submission.getStudent().getId(), submission.getExercise().getTitle());
-        } catch (Exception e) {
-            log.error("Failed to trigger LLM evaluation after grading: {}", e.getMessage());
-        }
+        // Trigger LLM Evaluation via service
+        llmIndexingService.evaluateKnowledge(submission.getStudent().getId(), submission.getExercise().getTitle());
 
         return ApiResponse.success("Soumission notée", studentExerciseMapper.toResponse(gradedSubmission));
     }
@@ -222,25 +210,8 @@ public class ExerciseService {
 
         StudentExercise savedSubmission = studentExerciseRepository.save(submission);
         
-        // Trigger LLM Evaluation
-        try {
-            org.springframework.web.client.RestTemplate restTemplate = new org.springframework.web.client.RestTemplate();
-            String llmServiceUrl = "http://localhost:8000/api/v1/knowledge/evaluate";
-            
-            java.util.Map<String, Object> requestBody = new java.util.HashMap<>();
-            requestBody.put("student_id", studentId.toString());
-            requestBody.put("notion", exercise.getTitle());
-            
-            org.springframework.http.HttpHeaders headers = new org.springframework.http.HttpHeaders();
-            headers.setContentType(org.springframework.http.MediaType.APPLICATION_JSON);
-            
-            org.springframework.http.HttpEntity<java.util.Map<String, Object>> httpEntity = new org.springframework.http.HttpEntity<>(requestBody, headers);
-            
-            restTemplate.postForEntity(llmServiceUrl, httpEntity, String.class);
-            log.info("Successfully triggered LLM evaluation for student {} on notion {}", studentId, exercise.getTitle());
-        } catch (Exception e) {
-            log.error("Failed to trigger LLM evaluation: {}", e.getMessage());
-        }
+        // Trigger LLM Evaluation via service
+        llmIndexingService.evaluateKnowledge(studentId, exercise.getTitle());
 
         return ApiResponse.success("Exercice soumis avec succès", studentExerciseMapper.toResponse(savedSubmission));
     }

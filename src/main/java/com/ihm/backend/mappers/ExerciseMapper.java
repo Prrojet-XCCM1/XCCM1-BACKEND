@@ -14,6 +14,7 @@ public interface ExerciseMapper {
 
     @Mapping(target = "course", ignore = true)
     @Mapping(target = "createdAt", ignore = true)
+    @Mapping(target = "id", ignore = true)
     Exercise toEntity(ExerciseCreateRequest request);
 
     @Mapping(target = "courseId", source = "course.id")
