@@ -5,8 +5,10 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.List;
+import java.util.Optional;
 import java.util.stream.Collectors;
 
+import org.springframework.beans.factory.ObjectProvider;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -41,12 +43,12 @@ public class CourseService {
     @Autowired
     private NotificationService notificationService;
     @Autowired
-    private com.ihm.backend.repository.elasticsearch.CourseSearchRepository courseSearchRepository;
+    private ObjectProvider<com.ihm.backend.repository.elasticsearch.CourseSearchRepository> courseSearchRepository;
 
     public List<Course> searchCourses(String query) {
-        // En réalité on utiliserait une recherche Elasticsearch ici
-        // Pour l'instant on expose juste la capacité
-        return (List<Course>) courseSearchRepository.findAll();
+        return Optional.ofNullable(courseSearchRepository.getIfAvailable())
+                .map(r -> (List<Course>) r.findAll())
+                .orElseGet(courseRepository::findAll);
     }
 
     // create a course
@@ -54,9 +56,9 @@ public class CourseService {
         Course course = courseMapper.toEntity(dto);
         User author = userRepository.findById(authorId).orElseThrow(() -> new Exception("Teacher does not exists"));
         course.setAuthor(author);
-        course = courseRepository.save(course);
-        courseSearchRepository.save(course);
-        return courseMapper.toResponse(course);
+        Course saved = courseRepository.save(course);
+        courseSearchRepository.ifAvailable(r -> r.save(saved));
+        return courseMapper.toResponse(saved);
     }
     // get all courses for a particular author
 
@@ -72,9 +74,9 @@ public class CourseService {
                 .orElseThrow(() -> new Exception("Course does not exist"));
 
         courseMapper.updateEntity(request, course);
-        course = courseRepository.save(course);
-        courseSearchRepository.save(course);
-        return courseMapper.toResponse(course);
+        Course saved = courseRepository.save(course);
+        courseSearchRepository.ifAvailable(r -> r.save(saved));
+        return courseMapper.toResponse(saved);
     }
 
     // get all courses
@@ -87,7 +89,7 @@ public class CourseService {
     public void deleteCourse(Integer courseId) throws Exception {
         Course course = courseRepository.findById(courseId).orElseThrow(() -> new Exception("Course does not exist"));
         courseRepository.delete(course);
-        courseSearchRepository.delete(course);
+        courseSearchRepository.ifAvailable(r -> r.delete(course));
     }
 
     // changeState of Course
@@ -96,7 +98,7 @@ public class CourseService {
                 .orElseThrow(() -> new Exception("Course does not exist"));
         course.setStatus(courseStatus);
         courseRepository.save(course);
-        courseSearchRepository.save(course);
+        courseSearchRepository.ifAvailable(r -> r.save(course));
 
         if (courseStatus == CourseStatus.PUBLISHED) {
             notificationService.sendCoursePublishedEmail(course.getAuthor(), course.getTitle());

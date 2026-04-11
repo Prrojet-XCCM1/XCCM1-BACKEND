@@ -11,12 +11,14 @@ import com.ihm.backend.mappers.StudentExerciseMapper;
 import com.ihm.backend.repository.jpa.*;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.ObjectProvider;
 import org.springframework.security.access.AccessDeniedException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDateTime;
 import java.util.List;
+import java.util.Optional;
 import java.util.UUID;
 import java.util.stream.Collectors;
 
@@ -32,10 +34,12 @@ public class ExerciseService {
     private final EnrollmentRepository enrollmentRepository;
     private final ExerciseMapper exerciseMapper;
     private final StudentExerciseMapper studentExerciseMapper;
-    private final com.ihm.backend.repository.elasticsearch.ExerciseSearchRepository exerciseSearchRepository;
+    private final ObjectProvider<com.ihm.backend.repository.elasticsearch.ExerciseSearchRepository> exerciseSearchRepository;
 
     public List<Exercise> searchExercises(String query) {
-        return (List<Exercise>) exerciseSearchRepository.findAll();
+        return Optional.ofNullable(exerciseSearchRepository.getIfAvailable())
+                .map(r -> (List<Exercise>) r.findAll())
+                .orElseGet(exerciseRepository::findAll);
     }
 
     // --- Teacher Operations ---
@@ -53,7 +57,7 @@ public class ExerciseService {
         Exercise exercise = exerciseMapper.toEntity(request);
         exercise.setCourse(course);
         Exercise savedExercise = exerciseRepository.save(exercise);
-        exerciseSearchRepository.save(savedExercise);
+        exerciseSearchRepository.ifAvailable(r -> r.save(savedExercise));
         return ApiResponse.created("Exercice créé avec succès", exerciseMapper.toResponse(savedExercise));
     }
 
@@ -69,7 +73,7 @@ public class ExerciseService {
 
         exerciseMapper.updateEntityFromRequest(request, exercise);
         Exercise updatedExercise = exerciseRepository.save(exercise);
-        exerciseSearchRepository.save(updatedExercise);
+        exerciseSearchRepository.ifAvailable(r -> r.save(updatedExercise));
         return ApiResponse.success("Exercice mis à jour", exerciseMapper.toResponse(updatedExercise));
     }
 
@@ -83,7 +87,7 @@ public class ExerciseService {
         }
 
         exerciseRepository.delete(exercise);
-        exerciseSearchRepository.delete(exercise);
+        exerciseSearchRepository.ifAvailable(r -> r.delete(exercise));
         return ApiResponse.success("Exercice supprimé");
     }
 

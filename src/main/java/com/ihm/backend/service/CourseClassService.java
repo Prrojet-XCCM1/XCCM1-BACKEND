@@ -17,16 +17,18 @@ import com.ihm.backend.repository.jpa.EnrollmentRepository;
 import com.ihm.backend.repository.jpa.UserRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.ObjectProvider;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.multipart.MultipartFile;
 
 import java.io.IOException;
+import java.nio.file.AccessDeniedException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
-import java.nio.file.AccessDeniedException;
 import java.util.List;
+import java.util.Optional;
 import java.util.UUID;
 import java.util.stream.Collectors;
 
@@ -40,10 +42,12 @@ public class CourseClassService {
     private final UserRepository userRepository;
     private final ClassEnrollmentRepository enrollmentRepository;
     private final EnrollmentRepository courseEnrollmentRepository;
-    private final com.ihm.backend.repository.elasticsearch.CourseClassSearchRepository classSearchRepository;
+    private final ObjectProvider<com.ihm.backend.repository.elasticsearch.CourseClassSearchRepository> classSearchRepository;
 
     public List<CourseClass> searchClasses(String query) {
-        return (List<CourseClass>) classSearchRepository.findAll();
+        return Optional.ofNullable(classSearchRepository.getIfAvailable())
+                .map(r -> (List<CourseClass>) r.findAll())
+                .orElseGet(classRepository::findAll);
     }
 
     // ─── CRUD ────────────────────────────────────────────────────────────────
@@ -67,7 +71,7 @@ public class CourseClassService {
                 .build();
 
         CourseClass saved = classRepository.save(entity);
-        classSearchRepository.save(saved);
+        classSearchRepository.ifAvailable(r -> r.save(saved));
         log.info("Classe de cours créée: id={}, name={}, teacher={}", saved.getId(), saved.getName(), teacherId);
         return buildResponse(saved, null);
     }
@@ -118,7 +122,7 @@ public class CourseClassService {
         if (request.getMaxStudents() != null)  entity.setMaxStudents(request.getMaxStudents());
 
         CourseClass saved = classRepository.save(entity);
-        classSearchRepository.save(saved);
+        classSearchRepository.ifAvailable(r -> r.save(saved));
         log.info("Classe mise à jour: id={}", classId);
         return buildResponse(saved, null);
     }
@@ -137,7 +141,7 @@ public class CourseClassService {
         }
 
         classRepository.delete(entity);
-        classSearchRepository.delete(entity);
+        classSearchRepository.ifAvailable(r -> r.delete(entity));
         log.info("Classe supprimée: id={}", classId);
     }
 

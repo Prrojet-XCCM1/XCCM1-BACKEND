@@ -1,5 +1,6 @@
 package com.ihm.backend.security;
 
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.security.authentication.AuthenticationManager;
@@ -17,7 +18,6 @@ import org.springframework.web.cors.CorsConfigurationSource;
 import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
 
 import com.ihm.backend.repository.jpa.UserRepository;
-import com.ihm.backend.service.JwtService;
 
 import java.util.Arrays;
 import java.util.List;
@@ -31,6 +31,9 @@ public class SecurityConfig {
         private final JwtAuthenticationEntryPoint jwtAuthenticationEntryPoint;
         private final CustomAccessDeniedHandler customAccessDeniedHandler;
 
+        @Value("${lti.security.frame-ancestors:self}")
+        private String ltiFrameAncestorsTokens;
+
         public SecurityConfig(
                         JwtAuthenticationFilter jwtAuthenticationFilter,
                         JwtAuthenticationEntryPoint jwtAuthenticationEntryPoint,
@@ -40,12 +43,32 @@ public class SecurityConfig {
                 this.customAccessDeniedHandler = customAccessDeniedHandler;
         }
 
+        private String frameAncestorsCspDirective() {
+                String raw = ltiFrameAncestorsTokens == null ? "self" : ltiFrameAncestorsTokens.trim();
+                if (raw.isEmpty()) {
+                        raw = "self";
+                }
+                String[] tokens = raw.split("\\s+");
+                StringBuilder sb = new StringBuilder("frame-ancestors ");
+                for (String t : tokens) {
+                        if ("self".equalsIgnoreCase(t)) {
+                                sb.append("'self' ");
+                        } else {
+                                sb.append(t).append(" ");
+                        }
+                }
+                return sb.toString().trim();
+        }
+
         @Bean
         public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
                 http
                                 .cors(cors -> cors.configurationSource(corsConfigurationSource()))
                                 // DÉSACTIVER CSRF POUR LES APIs REST
                                 .csrf(csrf -> csrf.disable()) // ← Important pour les APIs REST
+                                .headers(headers -> headers
+                                                .frameOptions(frame -> frame.disable())
+                                                .contentSecurityPolicy(csp -> csp.policyDirectives(frameAncestorsCspDirective())))
                                 .sessionManagement(session -> session
                                                 .sessionCreationPolicy(SessionCreationPolicy.STATELESS))
                                 .authorizeHttpRequests(auth -> auth
@@ -78,6 +101,9 @@ public class SecurityConfig {
                                                                 "/courses/**",
                                                                 "/api/v1/images/**")
                                                 .permitAll()
+
+                                                // === LTI 1.3 (Moodle → XCCM1) — public ===
+                                                .requestMatchers("/lti/**").permitAll()
 
                                                 // === ADMIN - ACCÈS RESTEINT ===
                                                 .requestMatchers("/api/v1/admin/**").hasRole("ADMIN")

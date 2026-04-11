@@ -9,6 +9,7 @@ import com.ihm.backend.repository.jpa.*;
 import com.ihm.backend.repository.elasticsearch.UserSearchRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.ObjectProvider;
 import org.springframework.security.authentication.*;
 import org.springframework.security.core.userdetails.UsernameNotFoundException;
 import org.springframework.security.crypto.password.PasswordEncoder;
@@ -30,7 +31,7 @@ public class AuthServiceImpl implements AuthService {
     private final JwtService jwtService;
     private final AuthenticationManager authenticationManager;
     private final NotificationService notificationService;
-    private final UserSearchRepository userSearchRepository;
+    private final ObjectProvider<UserSearchRepository> userSearchRepository;
 
     @Override
     public ApiResponse<AuthenticationResponse> authenticate(AuthenticationRequest request) {
@@ -87,7 +88,7 @@ public class AuthServiceImpl implements AuthService {
 
         // Sauvegarde
         User saved = userRepository.save(user);
-        userSearchRepository.save(saved);
+        userSearchRepository.ifAvailable(r -> r.save(saved));
         log.info("Utilisateur créé: {} avec le rôle {}", saved.getEmail(), saved.getRole());
 
         // Envoi email de bienvenue
@@ -212,7 +213,7 @@ public class AuthServiceImpl implements AuthService {
                 .build();
 
         User saved = userRepository.save(student);
-        userSearchRepository.save(saved);
+        userSearchRepository.ifAvailable(r -> r.save(saved));
         log.info("Étudiant créé: {}", saved.getEmail());
 
         // Envoi email de bienvenue
@@ -267,7 +268,7 @@ public class AuthServiceImpl implements AuthService {
                 .build();
 
         User saved = userRepository.save(teacher);
-        userSearchRepository.save(saved);
+        userSearchRepository.ifAvailable(r -> r.save(saved));
         log.info("Enseignant créé: {}", saved.getEmail());
 
         // Envoi email de bienvenue

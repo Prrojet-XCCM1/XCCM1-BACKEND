@@ -80,6 +80,11 @@ public class User implements UserDetails {
     @Column(name = "last_login")
     private LocalDateTime lastLogin;
 
+    /** Identifiant stable de l'utilisateur côté plateforme LTI (claim {@code sub}). */
+    @Column(name = "moodle_sub", unique = true)
+    @Field(type = FieldType.Keyword)
+    private String moodleSub;
+
     // Champs internes (non exposés dans l'API)
     @JsonIgnore
     @Builder.Default

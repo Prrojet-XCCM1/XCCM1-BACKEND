@@ -9,6 +9,7 @@ import com.ihm.backend.repository.jpa.UserRepository;
 import com.ihm.backend.repository.elasticsearch.UserSearchRepository;
 import com.ihm.backend.service.UserService;
 import lombok.RequiredArgsConstructor;
+import org.springframework.beans.factory.ObjectProvider;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.core.userdetails.UserDetails;
@@ -18,6 +19,7 @@ import org.springframework.transaction.annotation.Transactional;
 import java.time.LocalDateTime;
 import java.util.Arrays;
 import java.util.List;
+import java.util.Optional;
 import java.util.UUID;
 import java.util.stream.Collectors;
 
@@ -27,12 +29,13 @@ import java.util.stream.Collectors;
 public class UserServiceImpl implements UserService {
 
     private final UserRepository userRepository;
-    private final UserSearchRepository userSearchRepository;
+    private final ObjectProvider<UserSearchRepository> userSearchRepository;
 
     @Override
     public org.springframework.data.domain.Page<User> searchUsers(String query, org.springframework.data.domain.Pageable pageable) {
-        // Recherche simple par mot-clé (on peut affiner avec des critères complexes)
-        return userSearchRepository.findAll(pageable); // Placeholder, on peut implémenter une recherche par texte
+        return Optional.ofNullable(userSearchRepository.getIfAvailable())
+                .map(r -> r.findAll(pageable))
+                .orElseGet(() -> userRepository.findAll(pageable));
     }
 
     @Override
@@ -129,7 +132,7 @@ public class UserServiceImpl implements UserService {
         existingUser.setUpdatedAt(LocalDateTime.now());
         
         User saved = userRepository.save(existingUser);
-        userSearchRepository.save(saved);
+        userSearchRepository.ifAvailable(r -> r.save(saved));
         return saved;
     }
 
@@ -140,7 +143,7 @@ public class UserServiceImpl implements UserService {
         user.setActive(false);
         user.setUpdatedAt(LocalDateTime.now());
         userRepository.save(user);
-        userSearchRepository.save(user);
+        userSearchRepository.ifAvailable(r -> r.save(user));
     }
 
     @Override
@@ -150,7 +153,7 @@ public class UserServiceImpl implements UserService {
         user.setActive(true);
         user.setUpdatedAt(LocalDateTime.now());
         userRepository.save(user);
-        userSearchRepository.save(user);
+        userSearchRepository.ifAvailable(r -> r.save(user));
     }
 
     @Override
