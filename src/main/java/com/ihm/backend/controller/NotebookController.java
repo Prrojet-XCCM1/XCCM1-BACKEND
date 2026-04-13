@@ -40,7 +40,9 @@ public class NotebookController {
     }
 
     @DeleteMapping("/{id}")
+    @org.springframework.transaction.annotation.Transactional
     public ResponseEntity<Void> deleteNotebook(@PathVariable UUID id) {
+        notebookSourceRepository.deleteAll(notebookSourceRepository.findByNotebook_Id(id));
         notebookRepository.deleteById(id);
         return ResponseEntity.ok().build();
     }

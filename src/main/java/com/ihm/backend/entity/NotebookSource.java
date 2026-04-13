@@ -6,6 +6,7 @@ import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import java.util.UUID;
 
 @Data
@@ -20,6 +21,7 @@ public class NotebookSource {
     @Column(columnDefinition = "uuid")
     private UUID id;
 
+    @JsonIgnore
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "notebook_id", nullable = false)
     private Notebook notebook;
