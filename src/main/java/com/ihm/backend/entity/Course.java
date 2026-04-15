@@ -76,4 +76,12 @@ public class Course {
     
     @Builder.Default
     private Long downloadCount = 0L;
+
+    @jakarta.persistence.ManyToMany
+    @jakarta.persistence.JoinTable(
+        name = "course_editors",
+        joinColumns = @jakarta.persistence.JoinColumn(name = "course_id"),
+        inverseJoinColumns = @jakarta.persistence.JoinColumn(name = "user_id")
+    )
+    private java.util.List<User> editors;
 }
