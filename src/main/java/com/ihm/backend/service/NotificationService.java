@@ -2,6 +2,7 @@
 
 package com.ihm.backend.service;
 
+import com.ihm.backend.entity.Course;
 import com.ihm.backend.entity.User;
 import jakarta.mail.internet.MimeMessage;
 import lombok.RequiredArgsConstructor;
@@ -18,6 +19,7 @@ import org.springframework.stereotype.Service;
 public class NotificationService {
 
     private final JavaMailSender mailSender;
+    private final org.springframework.messaging.simp.SimpMessagingTemplate messagingTemplate;
 
     @Value("${spring.mail.username}")
     private String fromEmail;
@@ -28,9 +30,8 @@ public class NotificationService {
     @Value("${app.frontend.url:https://frontend-xccm-12027.vercel.app}")
     private String frontendUrl;
 
-    // ================================================================
-    // ENVOI D'EMAIL ASYNCHRONE GÉNÉRIQUE
-    // ================================================================
+    // ... (existing sendHtmlEmail method)
+
     @Async
     public void sendHtmlEmail(String to, String subject, String htmlBody) {
         try {
@@ -47,8 +48,68 @@ public class NotificationService {
 
         } catch (Exception e) {
             log.error("Échec de l'envoi d'email à {} : {}", to, e.getMessage());
-            // On ne fait pas planter l'app si l'email échoue
         }
+    }
+
+    // ================================================================
+    // REAL-TIME PUSH NOTIFICATIONS (WebSocket)
+    // ================================================================
+    public void sendRealTimeNotification(java.util.UUID userId, String message, String type) {
+        String destination = "/topic/notifications/" + userId;
+        java.util.Map<String, Object> payload = new java.util.HashMap<>();
+        payload.put("message", message);
+        payload.put("type", type);
+        payload.put("timestamp", java.time.LocalDateTime.now());
+        
+        messagingTemplate.convertAndSend(destination, payload);
+        log.info("Notification push envoyée à : {} (Type: {})", userId, type);
+    }
+
+    // ================================================================
+    // EMAIL D'INVITATION ÉDITEUR
+    // ================================================================
+    @Async
+    public void sendEditorInvitationEmail(User inviter, Course course, String inviteeEmail, String token) {
+        String validationUrl = frontendUrl + "/validate-invitation?token=" + token;
+
+        String html = """
+                <!DOCTYPE html>
+                <html>
+                <head>
+                    <meta charset="UTF-8">
+                    <style>
+                        body { font-family: 'Segoe UI', Arial, sans-serif; background: #f4f4f4; margin: 0; padding: 20px; }
+                        .container { max-width: 600px; margin: 20px auto; background: white; border-radius: 12px; overflow: hidden; box-shadow: 0 10px 30px rgba(0,0,0,0.1); }
+                        .header { background: #6366f1; color: white; padding: 40px 20px; text-align: center; }
+                        .content { padding: 40px 30px; color: #333; line-height: 1.7; }
+                        .button { display: inline-block; background: #6366f1; color: white; padding: 14px 32px; text-decoration: none; border-radius: 8px; font-weight: bold; margin: 20px 0; }
+                        .footer { background: #f8fafc; padding: 25px; text-align: center; color: #64748b; font-size: 13px; }
+                    </style>
+                </head>
+                <body>
+                    <div class="container">
+                        <div class="header">
+                            <h1>Invitation de Collaboration</h1>
+                        </div>
+                        <div class="content">
+                            <p>Bonjour,</p>
+                            <p><strong>%s</strong> vous invite à devenir éditeur pour le cours "<strong>%s</strong>".</p>
+                            <p>En acceptant cette invitation, vous pourrez modifier le contenu de ce cours et collaborer avec l'auteur.</p>
+                            <div style="text-align: center;">
+                                <a href="%s" class="button">Accepter l'invitation</a>
+                            </div>
+                            <p>Si vous n'avez pas de compte, vous serez invité à en créer un.</p>
+                        </div>
+                        <div class="footer">
+                            © 2025 %s • Plateforme de collaboration
+                        </div>
+                    </div>
+                </body>
+                </html>
+                """
+                .formatted(inviter.getFullName(), course.getTitle(), validationUrl, appName);
+
+        sendHtmlEmail(inviteeEmail, "Invitation à éditer le cours : " + course.getTitle(), html);
     }
 
     // ================================================================
