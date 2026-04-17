@@ -52,6 +52,7 @@ public class CourseService {
     }
 
     // create a course
+    @Transactional
     public CourseResponse createCourse(CourseCreateRequest dto, UUID authorId) throws Exception {
         Course course = courseMapper.toEntity(dto);
         User author = userRepository.findById(authorId).orElseThrow(() -> new Exception("Teacher does not exists"));
@@ -69,6 +70,7 @@ public class CourseService {
     }
 
     // update course
+    @Transactional
     public CourseResponse updateCourse(Integer courseId, CourseUpdateRequest request) throws Exception {
         Course course = courseRepository.findById(courseId)
                 .orElseThrow(() -> new Exception("Course does not exist"));
@@ -86,6 +88,7 @@ public class CourseService {
     }
 
     // delete course
+    @Transactional
     public void deleteCourse(Integer courseId) throws Exception {
         Course course = courseRepository.findById(courseId).orElseThrow(() -> new Exception("Course does not exist"));
         courseRepository.delete(course);
@@ -93,6 +96,7 @@ public class CourseService {
     }
 
     // changeState of Course
+    @Transactional
     public CourseResponse changeCourseStatus(CourseStatus courseStatus, Integer courseId) throws Exception {
         Course course = courseRepository.findById(courseId)
                 .orElseThrow(() -> new Exception("Course does not exist"));

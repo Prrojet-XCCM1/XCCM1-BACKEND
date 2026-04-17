@@ -83,5 +83,6 @@ public class Course {
         joinColumns = @jakarta.persistence.JoinColumn(name = "course_id"),
         inverseJoinColumns = @jakarta.persistence.JoinColumn(name = "user_id")
     )
+    @org.springframework.data.annotation.Transient
     private java.util.List<User> editors;
 }

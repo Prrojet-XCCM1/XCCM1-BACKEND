@@ -14,7 +14,6 @@ public class JwtProperties {
     private String secretKey;
     private long refreshExpiration;
 
-    // getters and setters
     public long getExpiration() { return expiration; }
     public void setExpiration(long expiration) { this.expiration = expiration; }
 
