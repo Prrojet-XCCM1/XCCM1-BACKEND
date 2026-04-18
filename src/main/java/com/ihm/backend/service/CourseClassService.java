@@ -43,7 +43,12 @@ public class CourseClassService {
     private final com.ihm.backend.repository.elasticsearch.CourseClassSearchRepository classSearchRepository;
 
     public List<CourseClass> searchClasses(String query) {
-        return (List<CourseClass>) classSearchRepository.findAll();
+        try {
+            return (List<CourseClass>) classSearchRepository.findAll();
+        } catch (Exception e) {
+            log.warn("Elasticsearch est indisponible pour la recherche de classes, repli sur JPA: {}", e.getMessage());
+            return classRepository.searchOpenClasses(query);
+        }
     }
 
     // ─── CRUD ────────────────────────────────────────────────────────────────
@@ -67,7 +72,11 @@ public class CourseClassService {
                 .build();
 
         CourseClass saved = classRepository.save(entity);
-        classSearchRepository.save(saved);
+        try {
+            classSearchRepository.save(saved);
+        } catch (Exception e) {
+            log.error("Impossible de synchroniser la classe avec Elasticsearch: {}", e.getMessage());
+        }
         log.info("Classe de cours créée: id={}, name={}, teacher={}", saved.getId(), saved.getName(), teacherId);
         return buildResponse(saved, null);
     }
@@ -118,7 +127,11 @@ public class CourseClassService {
         if (request.getMaxStudents() != null)  entity.setMaxStudents(request.getMaxStudents());
 
         CourseClass saved = classRepository.save(entity);
-        classSearchRepository.save(saved);
+        try {
+            classSearchRepository.save(saved);
+        } catch (Exception e) {
+            log.error("Impossible de synchroniser la mise à jour de la classe avec Elasticsearch: {}", e.getMessage());
+        }
         log.info("Classe mise à jour: id={}", classId);
         return buildResponse(saved, null);
     }
@@ -137,7 +150,11 @@ public class CourseClassService {
         }
 
         classRepository.delete(entity);
-        classSearchRepository.delete(entity);
+        try {
+            classSearchRepository.delete(entity);
+        } catch (Exception e) {
+            log.error("Impossible de supprimer la classe d'Elasticsearch: {}", e.getMessage());
+        }
         log.info("Classe supprimée: id={}", classId);
     }
 

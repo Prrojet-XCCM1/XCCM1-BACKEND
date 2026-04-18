@@ -36,7 +36,12 @@ public class ExerciseService {
     private final LLMIndexingService llmIndexingService;
 
     public List<Exercise> searchExercises(String query) {
-        return (List<Exercise>) exerciseSearchRepository.findAll();
+        try {
+            return (List<Exercise>) exerciseSearchRepository.findAll();
+        } catch (Exception e) {
+            log.warn("Elasticsearch est indisponible pour la recherche d'exercices, repli sur JPA: {}", e.getMessage());
+            return exerciseRepository.searchExercises(query);
+        }
     }
 
     // --- Teacher Operations ---
@@ -54,7 +59,11 @@ public class ExerciseService {
         Exercise exercise = exerciseMapper.toEntity(request);
         exercise.setCourse(course);
         Exercise savedExercise = exerciseRepository.save(exercise);
-        exerciseSearchRepository.save(savedExercise);
+        try {
+            exerciseSearchRepository.save(savedExercise);
+        } catch (Exception e) {
+            log.error("Impossible de synchroniser l'exercice avec Elasticsearch: {}", e.getMessage());
+        }
         
         // Trigger automated indexing for RAG
         llmIndexingService.indexExercise(savedExercise);
@@ -74,7 +83,11 @@ public class ExerciseService {
 
         exerciseMapper.updateEntityFromRequest(request, exercise);
         Exercise updatedExercise = exerciseRepository.save(exercise);
-        exerciseSearchRepository.save(updatedExercise);
+        try {
+            exerciseSearchRepository.save(updatedExercise);
+        } catch (Exception e) {
+            log.error("Impossible de synchroniser la mise à jour de l'exercice avec Elasticsearch: {}", e.getMessage());
+        }
         return ApiResponse.success("Exercice mis à jour", exerciseMapper.toResponse(updatedExercise));
     }
 
@@ -88,7 +101,11 @@ public class ExerciseService {
         }
 
         exerciseRepository.delete(exercise);
-        exerciseSearchRepository.delete(exercise);
+        try {
+            exerciseSearchRepository.delete(exercise);
+        } catch (Exception e) {
+            log.error("Impossible de supprimer l'exercice d'Elasticsearch: {}", e.getMessage());
+        }
         return ApiResponse.success("Exercice supprimé");
     }
 
