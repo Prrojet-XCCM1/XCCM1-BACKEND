@@ -1,6 +1,8 @@
 package com.ihm.backend.service;
 
 import java.nio.file.AccessDeniedException;
+import java.util.Map;
+import java.util.HashMap;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
@@ -21,8 +23,6 @@ import com.ihm.backend.mappers.CourseMapper;
 import com.ihm.backend.repository.jpa.CourseRepository;
 import com.ihm.backend.repository.jpa.EnrollmentRepository;
 import com.ihm.backend.repository.jpa.UserRepository;
-
-
 
 import java.util.UUID;
 import com.ihm.backend.entity.*;
@@ -221,5 +221,9 @@ public class CourseService {
         course.setDownloadCount(course.getDownloadCount() + 1);
         course = courseRepository.save(course);
         return courseMapper.toResponse(course);
+    }
+
+    public List<Map<String, Object>> getRecommendations(String title, String description) {
+        return llmIndexingService.recommendCourses(title, description);
     }
 }
