@@ -28,6 +28,9 @@ import java.util.UUID;
 import com.ihm.backend.entity.*;
 import com.ihm.backend.enums.CourseStatus;
 
+import lombok.extern.slf4j.Slf4j;
+
+@Slf4j
 @Service
 public class CourseService {
     @Autowired
@@ -46,9 +49,13 @@ public class CourseService {
     private LLMIndexingService llmIndexingService;
 
     public List<Course> searchCourses(String query) {
-        // En réalité on utiliserait une recherche Elasticsearch ici
-        // Pour l'instant on expose juste la capacité
-        return (List<Course>) courseSearchRepository.findAll();
+        try {
+            // Tentative de recherche via Elasticsearch
+            return (List<Course>) courseSearchRepository.findAll();
+        } catch (Exception e) {
+            log.warn("Elasticsearch est indisponible pour la recherche de cours, repli sur JPA: {}", e.getMessage());
+            return courseRepository.searchPublishedCourses(query);
+        }
     }
 
     // create a course
@@ -58,7 +65,13 @@ public class CourseService {
         User author = userRepository.findById(authorId).orElseThrow(() -> new Exception("Teacher does not exists"));
         course.setAuthor(author);
         course = courseRepository.save(course);
-        courseSearchRepository.save(course);
+        
+        try {
+            courseSearchRepository.save(course);
+        } catch (Exception e) {
+            log.error("Impossible de synchroniser le cours avec Elasticsearch: {}", e.getMessage());
+        }
+        
         return courseMapper.toResponse(course);
     }
     // get all courses for a particular author
@@ -77,7 +90,13 @@ public class CourseService {
 
         courseMapper.updateEntity(request, course);
         course = courseRepository.save(course);
-        courseSearchRepository.save(course);
+        
+        try {
+            courseSearchRepository.save(course);
+        } catch (Exception e) {
+            log.error("Impossible de synchroniser la mise à jour du cours avec Elasticsearch: {}", e.getMessage());
+        }
+        
         return courseMapper.toResponse(course);
     }
 
@@ -92,7 +111,12 @@ public class CourseService {
     public void deleteCourse(Integer courseId) throws Exception {
         Course course = courseRepository.findById(courseId).orElseThrow(() -> new Exception("Course does not exist"));
         courseRepository.delete(course);
-        courseSearchRepository.delete(course);
+        
+        try {
+            courseSearchRepository.delete(course);
+        } catch (Exception e) {
+            log.error("Impossible de supprimer le cours d'Elasticsearch: {}", e.getMessage());
+        }
     }
 
     // changeState of Course
@@ -102,7 +126,12 @@ public class CourseService {
                 .orElseThrow(() -> new Exception("Course does not exist"));
         course.setStatus(courseStatus);
         courseRepository.save(course);
-        courseSearchRepository.save(course);
+        
+        try {
+            courseSearchRepository.save(course);
+        } catch (Exception e) {
+            log.error("Impossible de synchroniser le changement de statut du cours avec Elasticsearch: {}", e.getMessage());
+        }
 
         if (courseStatus == CourseStatus.PUBLISHED) {
             notificationService.sendCoursePublishedEmail(course.getAuthor(), course.getTitle());

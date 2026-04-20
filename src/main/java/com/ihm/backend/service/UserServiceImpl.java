@@ -9,6 +9,7 @@ import com.ihm.backend.repository.jpa.UserRepository;
 import com.ihm.backend.repository.elasticsearch.UserSearchRepository;
 import com.ihm.backend.service.UserService;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.core.userdetails.UserDetails;
@@ -21,6 +22,7 @@ import java.util.List;
 import java.util.UUID;
 import java.util.stream.Collectors;
 
+@Slf4j
 @Service
 @RequiredArgsConstructor
 @Transactional(readOnly = true)
@@ -31,8 +33,13 @@ public class UserServiceImpl implements UserService {
 
     @Override
     public org.springframework.data.domain.Page<User> searchUsers(String query, org.springframework.data.domain.Pageable pageable) {
-        // Recherche simple par mot-clé (on peut affiner avec des critères complexes)
-        return userSearchRepository.findAll(pageable); // Placeholder, on peut implémenter une recherche par texte
+        try {
+            // Tentative de recherche via Elasticsearch
+            return userSearchRepository.findAll(pageable);
+        } catch (Exception e) {
+            log.warn("Elasticsearch est indisponible pour la recherche d'utilisateurs, repli sur JPA: {}", e.getMessage());
+            return userRepository.searchUsers(query, pageable);
+        }
     }
 
     @Override
@@ -129,7 +136,11 @@ public class UserServiceImpl implements UserService {
         existingUser.setUpdatedAt(LocalDateTime.now());
         
         User saved = userRepository.save(existingUser);
-        userSearchRepository.save(saved);
+        try {
+            userSearchRepository.save(saved);
+        } catch (Exception e) {
+            log.error("Impossible de synchroniser l'utilisateur avec Elasticsearch après mise à jour: {}", e.getMessage());
+        }
         return saved;
     }
 
@@ -140,7 +151,11 @@ public class UserServiceImpl implements UserService {
         user.setActive(false);
         user.setUpdatedAt(LocalDateTime.now());
         userRepository.save(user);
-        userSearchRepository.save(user);
+        try {
+            userSearchRepository.save(user);
+        } catch (Exception e) {
+            log.error("Impossible de synchroniser l'utilisateur avec Elasticsearch après désactivation: {}", e.getMessage());
+        }
     }
 
     @Override
@@ -150,7 +165,11 @@ public class UserServiceImpl implements UserService {
         user.setActive(true);
         user.setUpdatedAt(LocalDateTime.now());
         userRepository.save(user);
-        userSearchRepository.save(user);
+        try {
+            userSearchRepository.save(user);
+        } catch (Exception e) {
+            log.error("Impossible de synchroniser l'utilisateur avec Elasticsearch après activation: {}", e.getMessage());
+        }
     }
 
     @Override
