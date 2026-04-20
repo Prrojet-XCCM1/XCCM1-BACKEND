@@ -18,6 +18,7 @@ import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 
 import java.util.List;
+import java.util.Map;
 import java.util.UUID;
 
 @RestController
@@ -188,5 +189,14 @@ public class CourseController {
     public ResponseEntity<ApiResponse<CourseResponse>> incrementDownloadCount(@PathVariable Integer courseId) throws Exception {
         return ResponseEntity.ok(ApiResponse.success("Nombre de téléchargements incrémenté", 
                 courseService.incrementDownloadCount(courseId)));
+    }
+
+    @PreAuthorize("hasRole('TEACHER')")
+    @GetMapping("/recommend")
+    public ResponseEntity<ApiResponse<List<Map<String, Object>>>> getRecommendations(
+            @RequestParam String title,
+            @RequestParam(required = false) String description) {
+        return ResponseEntity.ok(ApiResponse.success("Recommandations récupérées", 
+                courseService.getRecommendations(title, description)));
     }
 }
