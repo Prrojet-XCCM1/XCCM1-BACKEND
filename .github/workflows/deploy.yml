@@ -3,6 +3,8 @@ name: CI/CD Pipeline
 on:
   push:
     branches: ["main"]
+    paths:
+      - "XCCM1-BACKEND/**"
 
 env:
   REGISTRY: ghcr.io
