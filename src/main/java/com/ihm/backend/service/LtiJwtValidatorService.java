@@ -1,4 +1,4 @@
-package com.ihm.backend.lti;
+package com.ihm.backend.service;
 
 import com.nimbusds.jose.JWSVerifier;
 import com.nimbusds.jose.crypto.RSASSAVerifier;

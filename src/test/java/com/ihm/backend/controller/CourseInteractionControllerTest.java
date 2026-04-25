@@ -76,8 +76,7 @@ class CourseInteractionControllerTest {
 
     private void authenticateAs(User user) {
         SecurityContextHolder.getContext().setAuthentication(
-                new UsernamePasswordAuthenticationToken(user, null, List.of())
-        );
+                new UsernamePasswordAuthenticationToken(user, null, List.of()));
     }
 
     @Nested
@@ -91,7 +90,7 @@ class CourseInteractionControllerTest {
             when(interactionService.toggleLike(eq(5), eq(studentId))).thenReturn(res);
 
             mockMvc.perform(post("/api/courses/5/interactions/like")
-                            .with(user(studentUser)))
+                    .with(user(studentUser)))
                     .andDo(print())
                     .andExpect(status().isOk())
                     .andExpect(jsonPath("$.data.liked").value(true));
@@ -109,7 +108,7 @@ class CourseInteractionControllerTest {
             when(interactionService.recordView(eq(5), eq(studentId))).thenReturn(res);
 
             mockMvc.perform(post("/api/courses/5/interactions/view")
-                            .with(user(studentUser)))
+                    .with(user(studentUser)))
                     .andDo(print())
                     .andExpect(status().isOk())
                     .andExpect(jsonPath("$.data.recorded").value(true));
@@ -126,7 +125,7 @@ class CourseInteractionControllerTest {
             when(interactionService.getComments(eq(5))).thenReturn(List.of(comment));
 
             mockMvc.perform(get("/api/courses/5/interactions/comments")
-                            .with(user(studentUser)))
+                    .with(user(studentUser)))
                     .andDo(print())
                     .andExpect(status().isOk())
                     .andExpect(jsonPath("$.data[0].content").value("Super !"));
@@ -143,9 +142,9 @@ class CourseInteractionControllerTest {
             when(interactionService.addComment(eq(5), eq(studentId), eq("Excellent cours"))).thenReturn(res);
 
             mockMvc.perform(post("/api/courses/5/interactions/comments")
-                            .with(user(studentUser))
-                            .contentType(MediaType.APPLICATION_JSON)
-                            .content(objectMapper.writeValueAsString(req)))
+                    .with(user(studentUser))
+                    .contentType(MediaType.APPLICATION_JSON)
+                    .content(objectMapper.writeValueAsString(req)))
                     .andDo(print())
                     .andExpect(status().isCreated())
                     .andExpect(jsonPath("$.data.content").value("Excellent cours"));
@@ -159,7 +158,70 @@ class CourseInteractionControllerTest {
                     .when(interactionService).deleteComment(eq(999L), eq(studentId));
 
             mockMvc.perform(delete("/api/courses/5/interactions/comments/999")
-                            .with(user(studentUser)))
+                    .with(user(studentUser)))
+                    .andDo(print())
+                    .andExpect(status().isNotFound())
+                    .andExpect(jsonPath("$.success").value(false));
+        }
+
+        @Test
+        @DisplayName("GET /api/courses/{id}/interactions/like - Statut du like (Succès)")
+        void getLikeStatus_success() throws Exception {
+            authenticateAs(studentUser);
+            CourseLikeResponse res = CourseLikeResponse.builder().liked(false).likeCount(7).build();
+            when(interactionService.getLikeStatus(eq(5), eq(studentId))).thenReturn(res);
+
+            mockMvc.perform(get("/api/courses/5/interactions/like")
+                    .with(user(studentUser)))
+                    .andDo(print())
+                    .andExpect(status().isOk())
+                    .andExpect(jsonPath("$.data.liked").value(false))
+                    .andExpect(jsonPath("$.data.likeCount").value(7));
+        }
+
+        @Test
+        @DisplayName("PUT /api/courses/{id}/interactions/comments/{cid} - Modifier un commentaire (Succès)")
+        void updateComment_success() throws Exception {
+            authenticateAs(studentUser);
+            CourseCommentRequest req = new CourseCommentRequest();
+            req.setContent("Commentaire mis à jour");
+            CourseCommentDTO updated = CourseCommentDTO.builder().id(100L).content("Commentaire mis à jour").build();
+
+            when(interactionService.updateComment(eq(100L), eq(studentId), eq("Commentaire mis à jour")))
+                    .thenReturn(updated);
+
+            mockMvc.perform(put("/api/courses/5/interactions/comments/100")
+                    .with(user(studentUser))
+                    .contentType(MediaType.APPLICATION_JSON)
+                    .content(objectMapper.writeValueAsString(req)))
+                    .andDo(print())
+                    .andExpect(status().isOk())
+                    .andExpect(jsonPath("$.data.content").value("Commentaire mis à jour"));
+        }
+
+        @Test
+        @DisplayName("GET /api/courses/{id}/interactions/teacher/comments - Commentaires enseignant (Succès)")
+        void getCourseCommentsForTeacher_success() throws Exception {
+            authenticateAs(studentUser);
+            CourseCommentDTO comment = CourseCommentDTO.builder().id(200L).content("Question étudiant").build();
+            when(interactionService.getCourseCommentsForTeacher(eq(5), any())).thenReturn(List.of(comment));
+
+            mockMvc.perform(get("/api/courses/5/interactions/teacher/comments")
+                    .with(user(studentUser)))
+                    .andDo(print())
+                    .andExpect(status().isOk())
+                    .andExpect(jsonPath("$.data[0].content").value("Question étudiant"));
+        }
+
+        @Test
+        @DisplayName("GET /api/courses/{id}/interactions/teacher/comments - Commentaires enseignant (Erreur 404)")
+        void getCourseCommentsForTeacher_notFound() throws Exception {
+            authenticateAs(studentUser);
+            when(interactionService.getCourseCommentsForTeacher(eq(999), any()))
+                    .thenThrow(new ResourceNotFoundException("Cours non trouvé"));
+
+            mockMvc.perform(get("/api/courses/999/interactions/teacher/comments")
+                    .with(user(studentUser)))
                     .andDo(print())
                     .andExpect(status().isNotFound())
                     .andExpect(jsonPath("$.success").value(false));

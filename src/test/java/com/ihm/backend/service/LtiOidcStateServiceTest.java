@@ -1,4 +1,4 @@
-package com.ihm.backend.lti;
+package com.ihm.backend.service;
 
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;

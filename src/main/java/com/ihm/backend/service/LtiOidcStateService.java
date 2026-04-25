@@ -1,4 +1,4 @@
-package com.ihm.backend.lti;
+package com.ihm.backend.service;
 
 import org.springframework.stereotype.Service;
 

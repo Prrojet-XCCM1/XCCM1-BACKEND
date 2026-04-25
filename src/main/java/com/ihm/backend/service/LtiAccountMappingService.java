@@ -1,4 +1,4 @@
-package com.ihm.backend.lti;
+package com.ihm.backend.service;
 
 import com.ihm.backend.entity.User;
 import com.ihm.backend.enums.UserRole;

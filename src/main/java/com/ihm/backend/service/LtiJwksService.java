@@ -1,4 +1,4 @@
-package com.ihm.backend.lti;
+package com.ihm.backend.service;
 
 import com.nimbusds.jose.jwk.JWKSet;
 import lombok.extern.slf4j.Slf4j;
