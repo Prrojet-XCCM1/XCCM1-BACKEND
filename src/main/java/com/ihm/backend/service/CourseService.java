@@ -1,6 +1,8 @@
 package com.ihm.backend.service;
 
 import java.nio.file.AccessDeniedException;
+import java.util.Map;
+import java.util.HashMap;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
@@ -24,12 +26,13 @@ import com.ihm.backend.repository.jpa.CourseRepository;
 import com.ihm.backend.repository.jpa.EnrollmentRepository;
 import com.ihm.backend.repository.jpa.UserRepository;
 
-
-
 import java.util.UUID;
 import com.ihm.backend.entity.*;
 import com.ihm.backend.enums.CourseStatus;
 
+import lombok.extern.slf4j.Slf4j;
+
+@Slf4j
 @Service
 public class CourseService {
     @Autowired
@@ -44,14 +47,17 @@ public class CourseService {
     private NotificationService notificationService;
     @Autowired
     private ObjectProvider<com.ihm.backend.repository.elasticsearch.CourseSearchRepository> courseSearchRepository;
+    @Autowired
+    private LLMIndexingService llmIndexingService;
 
     public List<Course> searchCourses(String query) {
         return Optional.ofNullable(courseSearchRepository.getIfAvailable())
                 .map(r -> (List<Course>) r.findAll())
-                .orElseGet(courseRepository::findAll);
+                .orElseGet(() -> courseRepository.searchPublishedCourses(query));
     }
 
     // create a course
+    @Transactional
     public CourseResponse createCourse(CourseCreateRequest dto, UUID authorId) throws Exception {
         Course course = courseMapper.toEntity(dto);
         User author = userRepository.findById(authorId).orElseThrow(() -> new Exception("Teacher does not exists"));
@@ -69,6 +75,7 @@ public class CourseService {
     }
 
     // update course
+    @Transactional
     public CourseResponse updateCourse(Integer courseId, CourseUpdateRequest request) throws Exception {
         Course course = courseRepository.findById(courseId)
                 .orElseThrow(() -> new Exception("Course does not exist"));
@@ -86,6 +93,7 @@ public class CourseService {
     }
 
     // delete course
+    @Transactional
     public void deleteCourse(Integer courseId) throws Exception {
         Course course = courseRepository.findById(courseId).orElseThrow(() -> new Exception("Course does not exist"));
         courseRepository.delete(course);
@@ -93,6 +101,7 @@ public class CourseService {
     }
 
     // changeState of Course
+    @Transactional
     public CourseResponse changeCourseStatus(CourseStatus courseStatus, Integer courseId) throws Exception {
         Course course = courseRepository.findById(courseId)
                 .orElseThrow(() -> new Exception("Course does not exist"));
@@ -102,6 +111,7 @@ public class CourseService {
 
         if (courseStatus == CourseStatus.PUBLISHED) {
             notificationService.sendCoursePublishedEmail(course.getAuthor(), course.getTitle());
+            llmIndexingService.indexCourse(course);
         }
 
         return courseMapper.toResponse(course);
@@ -216,5 +226,9 @@ public class CourseService {
         course.setDownloadCount(course.getDownloadCount() + 1);
         course = courseRepository.save(course);
         return courseMapper.toResponse(course);
+    }
+
+    public List<Map<String, Object>> getRecommendations(String title, String description) {
+        return llmIndexingService.recommendCourses(title, description);
     }
 }

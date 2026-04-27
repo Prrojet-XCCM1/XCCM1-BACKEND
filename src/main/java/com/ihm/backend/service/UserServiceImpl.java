@@ -9,6 +9,7 @@ import com.ihm.backend.repository.jpa.UserRepository;
 import com.ihm.backend.repository.elasticsearch.UserSearchRepository;
 import com.ihm.backend.service.UserService;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.ObjectProvider;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
@@ -23,6 +24,7 @@ import java.util.Optional;
 import java.util.UUID;
 import java.util.stream.Collectors;
 
+@Slf4j
 @Service
 @RequiredArgsConstructor
 @Transactional(readOnly = true)
@@ -35,7 +37,7 @@ public class UserServiceImpl implements UserService {
     public org.springframework.data.domain.Page<User> searchUsers(String query, org.springframework.data.domain.Pageable pageable) {
         return Optional.ofNullable(userSearchRepository.getIfAvailable())
                 .map(r -> r.findAll(pageable))
-                .orElseGet(() -> userRepository.findAll(pageable));
+                .orElseGet(() -> userRepository.searchUsers(query, pageable));
     }
 
     @Override

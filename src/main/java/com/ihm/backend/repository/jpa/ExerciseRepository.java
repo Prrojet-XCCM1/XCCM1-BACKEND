@@ -14,4 +14,9 @@ public interface ExerciseRepository extends JpaRepository<Exercise, Integer> {
     long countByCourse_Id(Integer courseId);
     
     List<Exercise> findByCourse_Author_Id(java.util.UUID authorId);
+
+    @org.springframework.data.jpa.repository.Query("SELECT e FROM Exercise e WHERE " +
+           "LOWER(e.title) LIKE LOWER(CONCAT('%', :query, '%')) OR " +
+           "LOWER(e.description) LIKE LOWER(CONCAT('%', :query, '%'))")
+    List<Exercise> searchExercises(@org.springframework.data.repository.query.Param("query") String query);
 }

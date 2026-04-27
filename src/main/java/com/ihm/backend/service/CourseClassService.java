@@ -47,7 +47,7 @@ public class CourseClassService {
     public List<CourseClass> searchClasses(String query) {
         return Optional.ofNullable(classSearchRepository.getIfAvailable())
                 .map(r -> (List<CourseClass>) r.findAll())
-                .orElseGet(classRepository::findAll);
+                .orElseGet(() -> classRepository.searchOpenClasses(query));
     }
 
     // ─── CRUD ────────────────────────────────────────────────────────────────

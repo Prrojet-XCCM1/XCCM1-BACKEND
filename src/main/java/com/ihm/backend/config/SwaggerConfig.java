@@ -41,7 +41,7 @@ public class SwaggerConfig {
                             .url("https://opensource.org/licenses/MIT")))
             .servers(List.of(
                     new Server()
-                            .url("http://localhost:8082")
+                            .url("http://localhost:8080")
                             .description("Serveur de Développement"),
                     new Server()
                             .url(productionUrl)
