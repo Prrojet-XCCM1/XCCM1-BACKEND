@@ -40,7 +40,7 @@ public class LtiLaunchController {
     })
     @PostMapping(value = "/launch", consumes = { "application/x-www-form-urlencoded", "application/json", "*/*" })
     public ResponseEntity<?> launch(
-            @Parameter(description = "JWT signé envoyé par Moodle (id_token LTI 1.3)", required = true) @RequestParam("id_token") String idToken,
+            @Parameter(description = "JWT signé envoyé par Moodle (id_token LTI 1.3)", required = true) @RequestParam(value = "id_token", required = false) String idToken,
 
             @Parameter(description = "Valeur de corrélation OIDC générée lors du login initiation", required = false) @RequestParam(value = "state", required = false) String state) {
 

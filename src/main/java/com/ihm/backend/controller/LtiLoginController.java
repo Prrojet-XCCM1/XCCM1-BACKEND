@@ -45,18 +45,23 @@ public class LtiLoginController {
     @GetMapping("/login")
     public void login(
             @Parameter(description = "URL du LMS émetteur", required = true, example = "http://localhost:3000")
-            @RequestParam("iss") String iss,
+            @RequestParam(value = "iss", required = false) String iss,
 
             @Parameter(description = "Identifiant de l'utilisateur côté LMS", required = true, example = "user123")
-            @RequestParam("login_hint") String loginHint,
+            @RequestParam(value = "login_hint", required = false) String loginHint,
 
             @Parameter(description = "URI de lancement après authentification", required = true, example = "http://localhost:8082/lti/launch")
-            @RequestParam("target_link_uri") String targetLinkUri,
+            @RequestParam(value = "target_link_uri", required = false) String targetLinkUri,
 
             @Parameter(description = "Hint de message LTI (optionnel)")
             @RequestParam(value = "lti_message_hint", required = false) String ltiMessageHint,
 
             HttpServletResponse response) throws IOException {
+
+        if (loginHint == null || loginHint.isBlank()) {
+            response.sendError(HttpServletResponse.SC_BAD_REQUEST, "Paramètre login_hint manquant");
+            return;
+        }
 
         log.info("LTI Login Initiation : iss={}, login_hint={}", iss, loginHint);
 

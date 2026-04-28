@@ -101,6 +101,9 @@ services:
       SPRING_PROFILES_ACTIVE: ${SPRING_PROFILES_ACTIVE}
       KAFKA_BOOTSTRAP_SERVERS: ${KAFKA_CONTAINER_NAME:-kafka}:${KAFKA_PORT:-9092}
       ELASTICSEARCH_URIS: http://${ELASTICSEARCH_CONTAINER_NAME:-elasticsearch}:9200
+      LTI_TOOL_PRIVATE_KEY_PEM_PATH: /app/secrets/lti-private-key.pem
+    volumes:
+      - ./secrets:/app/secrets:ro
     depends_on:
       postgres:
         condition: service_healthy

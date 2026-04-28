@@ -155,5 +155,50 @@ class LtiLoginControllerTest {
 
             assertEquals(400, response.getStatus());
         }
+
+        @Test
+        @DisplayName("GET /lti/login - login_hint absent (null) → 400 Bad Request")
+        void login_nullLoginHint_returns400() throws Exception {
+            MockHttpServletResponse response = new MockHttpServletResponse();
+            controller.login(
+                    "http://moodle.test.local",
+                    null,
+                    "http://localhost:8082/lti/launch",
+                    null,
+                    response);
+
+            assertEquals(400, response.getStatus());
+            verifyNoInteractions(oidcStateService);
+        }
+
+        @Test
+        @DisplayName("GET /lti/login - login_hint vide (espaces) → 400 Bad Request")
+        void login_blankLoginHint_returns400() throws Exception {
+            MockHttpServletResponse response = new MockHttpServletResponse();
+            controller.login(
+                    "http://moodle.test.local",
+                    "   ",
+                    "http://localhost:8082/lti/launch",
+                    null,
+                    response);
+
+            assertEquals(400, response.getStatus());
+            verifyNoInteractions(oidcStateService);
+        }
+
+        @Test
+        @DisplayName("GET /lti/login - target_link_uri null → 400 Bad Request")
+        void login_nullTargetLinkUri_returns400() throws Exception {
+            MockHttpServletResponse response = new MockHttpServletResponse();
+            controller.login(
+                    "http://moodle.test.local",
+                    "user123",
+                    null,
+                    null,
+                    response);
+
+            assertEquals(400, response.getStatus());
+            verifyNoInteractions(oidcStateService);
+        }
     }
 }
