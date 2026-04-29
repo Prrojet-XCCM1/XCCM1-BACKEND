@@ -62,11 +62,16 @@ public class CourseInvitationService {
         
         // Send push notification if user exists
         if (invitedUser != null) {
-            notificationService.sendRealTimeNotification(
-                invitedUser.getId(),
-                "Vous avez été invité à devenir éditeur pour le cours: " + course.getTitle(),
-                "COURSE_INVITATION"
-            );
+            try {
+                notificationService.sendRealTimeNotification(
+                    invitedUser.getId(),
+                    "Vous avez été invité à devenir éditeur pour le cours: " + course.getTitle(),
+                    "COURSE_INVITATION"
+                );
+            } catch (Exception e) {
+                log.error("Échec de l'envoi de la notification en temps réel à {} : {}", invitedUser.getId(), e.getMessage());
+                // On ne bloque pas l'invitation si la notification échoue
+            }
         }
 
         return saved;
