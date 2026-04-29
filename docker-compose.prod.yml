@@ -1,0 +1,77 @@
+version: "3.8"
+
+services:
+  # --- INFRASTRUCTURE ---
+  postgres:
+    image: postgres:16-alpine
+    container_name: xccm-postgres
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB:-xccm}
+      POSTGRES_USER: ${POSTGRES_USER:-admin}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-securepassword}
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    networks:
+      - xccm-network
+    restart: always
+
+  elasticsearch:
+    image: docker.elastic.co/elasticsearch/elasticsearch:8.11.1
+    container_name: xccm-elasticsearch
+    environment:
+      - discovery.type=single-node
+      - xpack.security.enabled=false
+      - "ES_JAVA_OPTS=-Xms512m -Xmx512m"
+    volumes:
+      - elastic_data:/usr/share/elasticsearch/data
+    networks:
+      - xccm-network
+    restart: always
+
+  zookeeper:
+    image: confluentinc/cp-zookeeper:7.5.0
+    environment:
+      ZOOKEEPER_CLIENT_PORT: 2181
+      ZOOKEEPER_TICK_TIME: 2000
+    networks:
+      - xccm-network
+
+  kafka:
+    image: confluentinc/cp-kafka:7.5.0
+    depends_on:
+      - zookeeper
+    environment:
+      KAFKA_BROKER_ID: 1
+      KAFKA_ZOOKEEPER_CONNECT: zookeeper:2181
+      KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://kafka:9092
+      KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
+    networks:
+      - xccm-network
+
+  # --- BACKEND ---
+  backend:
+    image: ${DOCKER_IMAGE}
+    container_name: xccm-backend
+    environment:
+      DB_URL: jdbc:postgresql://xccm-postgres:5432/${POSTGRES_DB:-xccm}
+      DB_USERNAME: ${POSTGRES_USER:-admin}
+      DB_PASSWORD: ${POSTGRES_PASSWORD:-securepassword}
+      JWT_SECRET: ${JWT_SECRET}
+      KAFKA_BOOTSTRAP_SERVERS: kafka:9092
+      ELASTICSEARCH_URIS: http://xccm-elasticsearch:9200
+      LLM_SERVICE_URL: http://xccm-llm-service:8000
+    depends_on:
+      - postgres
+      - elasticsearch
+      - kafka
+    networks:
+      - xccm-network
+    restart: always
+
+networks:
+  xccm-network:
+    external: true
+
+volumes:
+  postgres_data:
+  elastic_data:

@@ -76,13 +76,13 @@ jobs:
             # On définit le nom de l'image en minuscules pour le VPS aussi
             IMAGE_LOWER=$(echo ${{ github.repository }} | tr '[:upper:]' '[:lower:]')
             
-            cd ${{ secrets.DEPLOY_PATH || '~/xccm' }}
+            cd ${{ secrets.DEPLOY_PATH || '~/xccm' }}/XCCM1-BACKEND
             
             # Connexion au registre sur le VPS pour avoir le droit de pull
             echo "${{ secrets.GITHUB_TOKEN }}" | docker login ghcr.io -u ${{ github.actor }} --password-stdin
             
             # On passe la variable DOCKER_IMAGE directement à docker compose
-            DOCKER_IMAGE=${{ env.REGISTRY }}/$IMAGE_LOWER:latest docker compose pull app
-            DOCKER_IMAGE=${{ env.REGISTRY }}/$IMAGE_LOWER:latest docker compose up -d app
+            DOCKER_IMAGE=${{ env.REGISTRY }}/$IMAGE_LOWER:latest docker compose -f docker-compose.prod.yml pull
+            DOCKER_IMAGE=${{ env.REGISTRY }}/$IMAGE_LOWER:latest docker compose -f docker-compose.prod.yml up -d
             
             docker image prune -f
