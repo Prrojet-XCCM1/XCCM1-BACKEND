@@ -2,11 +2,15 @@ package com.ihm.backend.controller;
 
 import com.ihm.backend.dto.websocket.CollaborationMessage;
 import com.ihm.backend.entity.Exercise;
+import com.ihm.backend.entity.User;
+import com.ihm.backend.enums.EnrollmentStatus;
+import com.ihm.backend.repository.jpa.EnrollmentRepository;
 import com.ihm.backend.repository.jpa.ExerciseRepository;
 import com.ihm.backend.service.LockService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.messaging.handler.annotation.DestinationVariable;
+import org.springframework.messaging.handler.annotation.MessageExceptionHandler;
 import org.springframework.messaging.handler.annotation.MessageMapping;
 import org.springframework.messaging.handler.annotation.Payload;
 import org.springframework.messaging.simp.SimpMessagingTemplate;
@@ -14,10 +18,6 @@ import org.springframework.scheduling.annotation.Async;
 import org.springframework.security.core.Authentication;
 import org.springframework.stereotype.Controller;
 
-import org.springframework.messaging.handler.annotation.MessageExceptionHandler;
-
-import com.ihm.backend.repository.jpa.EnrollmentRepository;
-import com.ihm.backend.enums.EnrollmentStatus;
 import java.util.Optional;
 
 @Controller
@@ -31,30 +31,37 @@ public class CollaborationController {
     private final EnrollmentRepository enrollmentRepository;
 
     @MessageMapping("/projet/{id}/action")
-    public void handleAction(@DestinationVariable Long id, @Payload CollaborationMessage message, Authentication authentication) {
-        String userEmail = authentication.getName();
+    public void handleAction(@DestinationVariable Integer id, @Payload CollaborationMessage message, Authentication authentication) {
+        if (authentication == null || !(authentication.getPrincipal() instanceof User)) {
+            log.error("Unauthenticated user tried to send an action");
+            return;
+        }
+
+        User user = (User) authentication.getPrincipal();
+        String userEmail = user.getEmail();
         
         // --- Vérification de l'Autorisation ---
-        if (!isAuthorized(id, userEmail)) {
+        if (!isAuthorized(id, user)) {
             sendError(userEmail, "Non autorisé à modifier ce document");
             return;
         }
 
         message.setSenderEmail(userEmail);
+        message.setSenderName(user.getFullName());
 
         switch (message.getType()) {
             case LOCK:
                 if (lockService.acquireLock(message.getGranuleId(), userEmail)) {
                     messagingTemplate.convertAndSend("/topic/projet/" + id, message);
                 } else {
-                    sendError(userEmail, "Lock denied for granule " + message.getGranuleId());
+                    sendError(userEmail, "Verrou refusé pour l'élément " + message.getGranuleId());
                 }
                 break;
 
             case UNLOCK:
                 lockService.releaseLock(message.getGranuleId(), userEmail);
                 messagingTemplate.convertAndSend("/topic/projet/" + id, message);
-                // Sauvegarde asynchrone si c'est un UNLOCK_NODE (simulé ici par UNLOCK avec contenu)
+                // Sauvegarde asynchrone si du contenu est envoyé
                 if (message.getContent() != null) {
                     saveContentAsync(id, message.getContent());
                 }
@@ -66,7 +73,7 @@ public class CollaborationController {
                 if (message.getType() == CollaborationMessage.MessageType.MOVE) {
                     String owner = lockService.getLockOwner(message.getGranuleId());
                     if (owner == null || !owner.equals(userEmail)) {
-                        sendError(userEmail, "You do not own the lock for this element");
+                        sendError(userEmail, "Vous ne possédez pas le verrou pour cet élément");
                         return;
                     }
                 }
@@ -84,35 +91,35 @@ public class CollaborationController {
                 .type(CollaborationMessage.MessageType.ERROR)
                 .content(errorMessage)
                 .build();
-        messagingTemplate.convertAndSendToUser(userEmail, "/topic/errors", error);
+        messagingTemplate.convertAndSendToUser(userEmail, "/queue/errors", error);
     }
 
     @Async
-    public void saveContentAsync(Long exerciseId, String content) {
+    public void saveContentAsync(Integer exerciseId, String content) {
         log.info("Saving content for exercise {} asynchronously", exerciseId);
-        exerciseRepository.findById(exerciseId.intValue()).ifPresent(exercise -> {
+        exerciseRepository.findById(exerciseId).ifPresent(exercise -> {
             exercise.setContent(content);
             exerciseRepository.save(exercise);
             log.info("Exercise {} saved successfully", exerciseId);
         });
     }
 
-    private boolean isAuthorized(Long exerciseId, String userEmail) {
-        Optional<Exercise> exerciseOpt = exerciseRepository.findById(exerciseId.intValue());
+    private boolean isAuthorized(Integer exerciseId, User user) {
+        Optional<Exercise> exerciseOpt = exerciseRepository.findById(exerciseId);
         if (exerciseOpt.isEmpty()) return false;
         
         Exercise exercise = exerciseOpt.get();
         if (exercise.getCourse() == null) return false;
 
         // Est-ce l'auteur ?
-        if (exercise.getCourse().getAuthor().getEmail().equals(userEmail)) {
+        if (exercise.getCourse().getAuthor().getEmail().equals(user.getEmail())) {
             return true;
         }
 
         // Est-ce un collaborateur inscrit/invité ?
         return enrollmentRepository.findByCourse_IdAndUser_Id(
                 exercise.getCourse().getId(), 
-                ((com.ihm.backend.entity.User) org.springframework.security.core.context.SecurityContextHolder.getContext().getAuthentication().getPrincipal()).getId()
+                user.getId()
         ).map(enrollment -> 
                 enrollment.getStatus() == EnrollmentStatus.APPROVED || 
                 enrollment.getStatus() == EnrollmentStatus.INVITED
@@ -121,10 +128,11 @@ public class CollaborationController {
 
     @MessageExceptionHandler
     public void handleException(Exception exception, Authentication authentication) {
-        log.error("WebSocket error: {}", exception.getMessage());
+        log.error("WebSocket error: {}", exception.getMessage(), exception);
         if (authentication != null) {
-            sendError(authentication.getName(), "Server error: " + exception.getMessage());
+            sendError(authentication.getName(), "Erreur serveur : " + exception.getMessage());
         }
     }
 }
+
 

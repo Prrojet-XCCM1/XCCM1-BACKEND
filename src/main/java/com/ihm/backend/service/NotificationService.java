@@ -55,14 +55,13 @@ public class NotificationService {
     // REAL-TIME PUSH NOTIFICATIONS (WebSocket)
     // ================================================================
     public void sendRealTimeNotification(java.util.UUID userId, String message, String type) {
-        String destination = "/topic/notifications/" + userId;
         java.util.Map<String, Object> payload = new java.util.HashMap<>();
         payload.put("message", message);
         payload.put("type", type);
         payload.put("timestamp", java.time.LocalDateTime.now());
         
-        messagingTemplate.convertAndSend(destination, payload);
-        log.info("Notification push envoyée à : {} (Type: {})", userId, type);
+        messagingTemplate.convertAndSendToUser(userId.toString(), "/queue/notifications", payload);
+        log.info("Notification push envoyée à l'utilisateur : {} (Type: {})", userId, type);
     }
 
     // ================================================================
