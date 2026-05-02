@@ -61,13 +61,17 @@ public class AuthController {
 
     @PostMapping("/forgot-password")
     public ResponseEntity<ApiResponse<?>> forgotPassword(
-            @RequestBody PasswordResetRequest request) {
-        return ResponseEntity.ok(authService.requestPasswordReset(request));
+            @RequestBody @jakarta.validation.Valid PasswordResetRequest request) {
+        ApiResponse<?> response = authService.requestPasswordReset(request);
+        int status = response.getCode() != 0 ? response.getCode() : 200;
+        return ResponseEntity.status(status).body(response);
     }
 
     @PostMapping("/reset-password")
     public ResponseEntity<ApiResponse<?>> resetPassword(
-            @RequestBody PasswordUpdateRequest request) {
-        return ResponseEntity.ok(authService.resetPassword(request));
+            @RequestBody @jakarta.validation.Valid PasswordUpdateRequest request) {
+        ApiResponse<?> response = authService.resetPassword(request);
+        int status = response.getCode() != 0 ? response.getCode() : 200;
+        return ResponseEntity.status(status).body(response);
     }
 }

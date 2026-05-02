@@ -1,6 +1,7 @@
 package com.ihm.backend.entity;
 
 import com.fasterxml.jackson.annotation.*;
+import com.ihm.backend.enums.AuthProvider;
 import com.ihm.backend.enums.UserRole;
 
 import jakarta.persistence.*;
@@ -38,9 +39,17 @@ public class User implements UserDetails {
     @Field(type = FieldType.Keyword)
     private String email;
 
-    @Column(nullable = false)
+    @Column(nullable = true)
     @JsonProperty(access = JsonProperty.Access.WRITE_ONLY)
     private String password;
+
+    @Enumerated(EnumType.STRING)
+    @Column(name = "provider", nullable = false)
+    @Builder.Default
+    private AuthProvider provider = AuthProvider.LOCAL;
+
+    @Column(name = "provider_id")
+    private String providerId;
 
     @Enumerated(EnumType.STRING)
     @Column(nullable = false)

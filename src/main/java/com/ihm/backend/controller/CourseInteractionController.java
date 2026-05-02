@@ -13,18 +13,13 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
-import org.springframework.security.core.Authentication;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
 
 /**
- * Gère les interactions des utilisateurs sur les cours :
- * - Likes (toggle)
- * - Vues (enregistrement unique)
- * - Commentaires (CRUD)
- *
+ * Gère les interactions sur les cours : likes, vues, commentaires.
  * Base URL : /api/courses/{courseId}/interactions
  */
 @Slf4j
@@ -39,23 +34,16 @@ public class CourseInteractionController {
     //  LIKES
     // ============================================================
 
-    /**
-     * Toggle like / unlike d'un cours.
-     * Accessible à tout utilisateur authentifié (étudiant ou enseignant).
-     */
     @PostMapping("/like")
     @PreAuthorize("isAuthenticated()")
     public ResponseEntity<ApiResponse<CourseLikeResponse>> toggleLike(
             @PathVariable Integer courseId,
-            @AuthenticationPrincipal User user) throws Exception {
+            @AuthenticationPrincipal User user) {
         CourseLikeResponse response = interactionService.toggleLike(courseId, user.getId());
-        String message = response.isLiked() ? "Cours liké avec succès" : "Like retiré avec succès";
+        String message = response.isLiked() ? "Cours liké" : "Like retiré";
         return ResponseEntity.ok(ApiResponse.success(message, response));
     }
 
-    /**
-     * Récupère le statut du like de l'utilisateur connecté pour un cours.
-     */
     @GetMapping("/like")
     @PreAuthorize("isAuthenticated()")
     public ResponseEntity<ApiResponse<CourseLikeResponse>> getLikeStatus(
@@ -69,15 +57,11 @@ public class CourseInteractionController {
     //  VUES
     // ============================================================
 
-    /**
-     * Enregistre la vue de l'utilisateur sur un cours (une seule fois par user).
-     * Accessible à tout utilisateur authentifié.
-     */
     @PostMapping("/view")
     @PreAuthorize("isAuthenticated()")
     public ResponseEntity<ApiResponse<CourseViewResponse>> recordView(
             @PathVariable Integer courseId,
-            @AuthenticationPrincipal User user) throws Exception {
+            @AuthenticationPrincipal User user) {
         CourseViewResponse response = interactionService.recordView(courseId, user.getId());
         String message = response.isRecorded() ? "Vue enregistrée" : "Vue déjà comptabilisée";
         return ResponseEntity.ok(ApiResponse.success(message, response));
@@ -88,10 +72,10 @@ public class CourseInteractionController {
     // ============================================================
 
     /**
-     * Récupère tous les commentaires d'un cours (public, sans authentification requise).
+     * Liste publique des commentaires (pas d'authentification requise).
+     * Pas de @PreAuthorize — la route est déjà ouverte dans SecurityConfig.
      */
     @GetMapping("/comments")
-    @PreAuthorize("permitAll()")
     public ResponseEntity<ApiResponse<List<CourseCommentDTO>>> getComments(
             @PathVariable Integer courseId) {
         List<CourseCommentDTO> comments = interactionService.getComments(courseId);
@@ -99,9 +83,7 @@ public class CourseInteractionController {
     }
 
     /**
-     * Endpoint réservé à l'enseignant : récupère tous les commentaires des étudiants
-     * sur un cours dont il est l'auteur.
-     * GET /api/courses/{courseId}/interactions/teacher/comments
+     * Réservé à l'enseignant auteur du cours.
      */
     @GetMapping("/teacher/comments")
     @PreAuthorize("hasRole('TEACHER')")
@@ -110,28 +92,20 @@ public class CourseInteractionController {
             @AuthenticationPrincipal User user) throws Exception {
         List<CourseCommentDTO> comments = interactionService.getCourseCommentsForTeacher(courseId, user.getId());
         return ResponseEntity.ok(ApiResponse.success(
-                "Commentaires des étudiants récupérés (" + comments.size() + " au total)", comments));
+                "Commentaires des étudiants récupérés (" + comments.size() + ")", comments));
     }
 
-    /**
-     * Ajoute un commentaire sur un cours.
-     * Accessible à tout utilisateur authentifié (étudiant ou enseignant).
-     */
     @PostMapping("/comments")
     @PreAuthorize("isAuthenticated()")
     public ResponseEntity<ApiResponse<CourseCommentDTO>> addComment(
             @PathVariable Integer courseId,
             @Valid @RequestBody CourseCommentRequest request,
-            @AuthenticationPrincipal User user) throws Exception {
+            @AuthenticationPrincipal User user) {
         CourseCommentDTO comment = interactionService.addComment(courseId, user.getId(), request.getContent());
         return ResponseEntity.status(HttpStatus.CREATED)
                 .body(ApiResponse.created("Commentaire ajouté", comment));
     }
 
-    /**
-     * Modifie un commentaire existant.
-     * Seul l'auteur du commentaire peut le modifier.
-     */
     @PutMapping("/comments/{commentId}")
     @PreAuthorize("isAuthenticated()")
     public ResponseEntity<ApiResponse<CourseCommentDTO>> updateComment(
@@ -144,8 +118,7 @@ public class CourseInteractionController {
     }
 
     /**
-     * Supprime un commentaire.
-     * Seul l'auteur du commentaire peut le supprimer.
+     * Suppression par l'auteur.
      */
     @DeleteMapping("/comments/{commentId}")
     @PreAuthorize("isAuthenticated()")
@@ -155,5 +128,17 @@ public class CourseInteractionController {
             @AuthenticationPrincipal User user) throws Exception {
         interactionService.deleteComment(commentId, user.getId());
         return ResponseEntity.ok(ApiResponse.success("Commentaire supprimé", null));
+    }
+
+    /**
+     * Suppression par un admin (sans restriction de propriété).
+     */
+    @DeleteMapping("/comments/{commentId}/admin")
+    @PreAuthorize("hasRole('ADMIN')")
+    public ResponseEntity<ApiResponse<Void>> deleteCommentAsAdmin(
+            @PathVariable Integer courseId,
+            @PathVariable Long commentId) {
+        interactionService.deleteCommentAsAdmin(commentId);
+        return ResponseEntity.ok(ApiResponse.success("Commentaire supprimé par l'admin", null));
     }
 }

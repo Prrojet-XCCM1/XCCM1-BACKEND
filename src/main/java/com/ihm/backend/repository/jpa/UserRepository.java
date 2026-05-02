@@ -2,6 +2,7 @@
 package com.ihm.backend.repository.jpa;
 
 import com.ihm.backend.entity.User;
+import com.ihm.backend.enums.AuthProvider;
 import com.ihm.backend.enums.UserRole;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.stereotype.Repository;
@@ -36,4 +37,6 @@ public interface UserRepository extends JpaRepository<User, UUID> {
 
     // Vous pouvez aussi ajouter des méthodes spécifiques si besoin
     Optional<User> findByIdAndRole(UUID id, UserRole role);
+
+    Optional<User> findByProviderAndProviderId(AuthProvider provider, String providerId);
 }

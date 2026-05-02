@@ -7,6 +7,9 @@ import com.ihm.backend.enums.UserRole;
 import com.ihm.backend.exception.GlobalExceptionHandler;
 import com.ihm.backend.exception.ResourceNotFoundException;
 import com.ihm.backend.security.CustomAccessDeniedHandler;
+import com.ihm.backend.security.oauth2.CustomOAuth2UserService;
+import com.ihm.backend.security.oauth2.OAuth2AuthenticationFailureHandler;
+import com.ihm.backend.security.oauth2.OAuth2AuthenticationSuccessHandler;
 import com.ihm.backend.security.JwtAuthenticationEntryPoint;
 import com.ihm.backend.security.JwtAuthenticationFilter;
 import com.ihm.backend.service.EnrollmentService;
@@ -53,6 +56,12 @@ class EnrollmentControllerTest {
     private JwtAuthenticationEntryPoint jwtAuthenticationEntryPoint;
     @MockitoBean
     private CustomAccessDeniedHandler customAccessDeniedHandler;
+    @MockitoBean
+    private CustomOAuth2UserService customOAuth2UserService;
+    @MockitoBean
+    private OAuth2AuthenticationSuccessHandler oAuth2SuccessHandler;
+    @MockitoBean
+    private OAuth2AuthenticationFailureHandler oAuth2FailureHandler;
 
     private User studentUser;
     private User teacherUser;

@@ -5,6 +5,9 @@ import com.ihm.backend.dto.request.ContactRequest;
 import com.ihm.backend.dto.request.NewsletterRequest;
 import com.ihm.backend.exception.GlobalExceptionHandler;
 import com.ihm.backend.security.CustomAccessDeniedHandler;
+import com.ihm.backend.security.oauth2.CustomOAuth2UserService;
+import com.ihm.backend.security.oauth2.OAuth2AuthenticationFailureHandler;
+import com.ihm.backend.security.oauth2.OAuth2AuthenticationSuccessHandler;
 import com.ihm.backend.security.JwtAuthenticationEntryPoint;
 import com.ihm.backend.security.JwtAuthenticationFilter;
 import com.ihm.backend.service.NotificationService;
@@ -45,6 +48,12 @@ class ContactControllerTest {
     private JwtAuthenticationEntryPoint jwtAuthenticationEntryPoint;
     @MockitoBean
     private CustomAccessDeniedHandler customAccessDeniedHandler;
+    @MockitoBean
+    private CustomOAuth2UserService customOAuth2UserService;
+    @MockitoBean
+    private OAuth2AuthenticationSuccessHandler oAuth2SuccessHandler;
+    @MockitoBean
+    private OAuth2AuthenticationFailureHandler oAuth2FailureHandler;
 
     @Autowired
     private ObjectMapper objectMapper;

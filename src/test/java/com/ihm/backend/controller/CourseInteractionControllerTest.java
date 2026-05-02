@@ -12,6 +12,9 @@ import com.ihm.backend.exception.ResourceNotFoundException;
 import com.ihm.backend.security.CustomAccessDeniedHandler;
 import com.ihm.backend.security.JwtAuthenticationEntryPoint;
 import com.ihm.backend.security.JwtAuthenticationFilter;
+import com.ihm.backend.security.oauth2.CustomOAuth2UserService;
+import com.ihm.backend.security.oauth2.OAuth2AuthenticationFailureHandler;
+import com.ihm.backend.security.oauth2.OAuth2AuthenticationSuccessHandler;
 import com.ihm.backend.service.CourseInteractionService;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
@@ -58,6 +61,12 @@ class CourseInteractionControllerTest {
     private JwtAuthenticationEntryPoint jwtAuthenticationEntryPoint;
     @MockitoBean
     private CustomAccessDeniedHandler customAccessDeniedHandler;
+    @MockitoBean
+    private CustomOAuth2UserService customOAuth2UserService;
+    @MockitoBean
+    private OAuth2AuthenticationSuccessHandler oAuth2SuccessHandler;
+    @MockitoBean
+    private OAuth2AuthenticationFailureHandler oAuth2FailureHandler;
 
     @Autowired
     private ObjectMapper objectMapper;
@@ -152,6 +161,19 @@ class CourseInteractionControllerTest {
         }
 
         @Test
+        @DisplayName("DELETE /api/courses/{id}/interactions/comments/{cid} - Succès auteur")
+        void deleteComment_success() throws Exception {
+            authenticateAs(studentUser);
+            doNothing().when(interactionService).deleteComment(eq(10L), eq(studentId));
+
+            mockMvc.perform(delete("/api/courses/5/interactions/comments/10")
+                            .with(user(studentUser)))
+                    .andDo(print())
+                    .andExpect(status().isOk())
+                    .andExpect(jsonPath("$.success").value(true));
+        }
+
+        @Test
         @DisplayName("DELETE /api/courses/{id}/interactions/comments/{cid} - Erreur 404")
         void deleteComment_notFound() throws Exception {
             authenticateAs(studentUser);
@@ -163,6 +185,73 @@ class CourseInteractionControllerTest {
                     .andDo(print())
                     .andExpect(status().isNotFound())
                     .andExpect(jsonPath("$.success").value(false));
+        }
+
+        @Test
+        @DisplayName("PUT /api/courses/{id}/interactions/comments/{cid} - Mise à jour réussie")
+        void updateComment_success() throws Exception {
+            authenticateAs(studentUser);
+            CourseCommentRequest req = new CourseCommentRequest();
+            req.setContent("Contenu mis à jour");
+            CourseCommentDTO updated = CourseCommentDTO.builder().id(10L).content("Contenu mis à jour").build();
+
+            when(interactionService.updateComment(eq(10L), eq(studentId), eq("Contenu mis à jour")))
+                    .thenReturn(updated);
+
+            mockMvc.perform(put("/api/courses/5/interactions/comments/10")
+                            .with(user(studentUser))
+                            .contentType(MediaType.APPLICATION_JSON)
+                            .content(objectMapper.writeValueAsString(req)))
+                    .andDo(print())
+                    .andExpect(status().isOk())
+                    .andExpect(jsonPath("$.data.content").value("Contenu mis à jour"));
+        }
+
+        @Test
+        @DisplayName("POST /api/courses/{id}/interactions/comments - Contenu vide → 400")
+        void addComment_emptyContent_returns400() throws Exception {
+            authenticateAs(studentUser);
+            CourseCommentRequest req = new CourseCommentRequest();
+            req.setContent("   ");
+
+            mockMvc.perform(post("/api/courses/5/interactions/comments")
+                            .with(user(studentUser))
+                            .contentType(MediaType.APPLICATION_JSON)
+                            .content(objectMapper.writeValueAsString(req)))
+                    .andDo(print())
+                    .andExpect(status().isBadRequest());
+        }
+
+        @Test
+        @DisplayName("GET /api/courses/{id}/interactions/like - Statut du like")
+        void getLikeStatus_success() throws Exception {
+            authenticateAs(studentUser);
+            CourseLikeResponse res = CourseLikeResponse.builder().liked(false).likeCount(3).build();
+            when(interactionService.getLikeStatus(eq(5), eq(studentId))).thenReturn(res);
+
+            mockMvc.perform(get("/api/courses/5/interactions/like")
+                            .with(user(studentUser)))
+                    .andDo(print())
+                    .andExpect(status().isOk())
+                    .andExpect(jsonPath("$.data.liked").value(false))
+                    .andExpect(jsonPath("$.data.likeCount").value(3));
+        }
+
+        @Test
+        @DisplayName("DELETE /api/courses/{id}/interactions/comments/{cid}/admin - Admin supprime un commentaire")
+        void adminDeleteComment_success() throws Exception {
+            User adminUser = User.builder()
+                    .id(UUID.randomUUID())
+                    .email("admin@test.com")
+                    .role(UserRole.ADMIN)
+                    .build();
+            doNothing().when(interactionService).deleteCommentAsAdmin(eq(10L));
+
+            mockMvc.perform(delete("/api/courses/5/interactions/comments/10/admin")
+                            .with(user(adminUser)))
+                    .andDo(print())
+                    .andExpect(status().isOk())
+                    .andExpect(jsonPath("$.success").value(true));
         }
     }
 }

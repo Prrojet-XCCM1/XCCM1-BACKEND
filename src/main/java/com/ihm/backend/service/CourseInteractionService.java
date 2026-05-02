@@ -31,13 +31,8 @@ public class CourseInteractionService {
     //  LIKES
     // ============================================================
 
-    /**
-     * Toggle like/unlike sur un cours.
-     * Si l'utilisateur n'a pas encore liké → like ajouté + likeCount incrémenté.
-     * Si l'utilisateur a déjà liké → like retiré + likeCount décrémenté.
-     */
     @Transactional
-    public CourseLikeResponse toggleLike(Integer courseId, UUID userId) throws Exception {
+    public CourseLikeResponse toggleLike(Integer courseId, UUID userId) {
         Course course = getCourse(courseId);
         User user = getUser(userId);
 
@@ -48,7 +43,7 @@ public class CourseInteractionService {
             long newCount = Math.max(0, course.getLikeCount() - 1);
             course.setLikeCount(newCount);
             courseRepository.save(course);
-            log.info("Like retiré: userId={}, courseId={}, likeCount={}", userId, courseId, newCount);
+            log.info("Like retiré : userId={}, courseId={}, likeCount={}", userId, courseId, newCount);
             return CourseLikeResponse.builder()
                     .courseId(courseId)
                     .liked(false)
@@ -60,7 +55,7 @@ public class CourseInteractionService {
             long newCount = course.getLikeCount() + 1;
             course.setLikeCount(newCount);
             courseRepository.save(course);
-            log.info("Like ajouté: userId={}, courseId={}, likeCount={}", userId, courseId, newCount);
+            log.info("Like ajouté : userId={}, courseId={}, likeCount={}", userId, courseId, newCount);
             return CourseLikeResponse.builder()
                     .courseId(courseId)
                     .liked(true)
@@ -69,9 +64,7 @@ public class CourseInteractionService {
         }
     }
 
-    /**
-     * Retourne le statut du like de l'utilisateur pour un cours.
-     */
+    @Transactional(readOnly = true)
     public CourseLikeResponse getLikeStatus(Integer courseId, UUID userId) {
         Course course = courseRepository.findById(courseId)
                 .orElseThrow(() -> new ResourceNotFoundException("Cours non trouvé"));
@@ -87,18 +80,14 @@ public class CourseInteractionService {
     //  VUES
     // ============================================================
 
-    /**
-     * Enregistre la vue d'un utilisateur si elle n'existe pas encore.
-     * Met à jour le compteur de vues du cours.
-     */
     @Transactional
-    public CourseViewResponse recordView(Integer courseId, UUID userId) throws Exception {
+    public CourseViewResponse recordView(Integer courseId, UUID userId) {
         Course course = getCourse(courseId);
         User user = getUser(userId);
 
         boolean alreadyViewed = courseViewRepository.existsByCourse_IdAndUser_Id(courseId, userId);
         if (alreadyViewed) {
-            log.debug("Vue déjà enregistrée: userId={}, courseId={}", userId, courseId);
+            log.debug("Vue déjà enregistrée : userId={}, courseId={}", userId, courseId);
             return CourseViewResponse.builder()
                     .courseId(courseId)
                     .recorded(false)
@@ -111,7 +100,7 @@ public class CourseInteractionService {
         long newCount = course.getViewCount() + 1;
         course.setViewCount(newCount);
         courseRepository.save(course);
-        log.info("Vue enregistrée: userId={}, courseId={}, viewCount={}", userId, courseId, newCount);
+        log.info("Vue enregistrée : userId={}, courseId={}, viewCount={}", userId, courseId, newCount);
 
         return CourseViewResponse.builder()
                 .courseId(courseId)
@@ -124,11 +113,8 @@ public class CourseInteractionService {
     //  COMMENTAIRES
     // ============================================================
 
-    /**
-     * Ajoute un commentaire sur un cours.
-     */
     @Transactional
-    public CourseCommentDTO addComment(Integer courseId, UUID userId, String content) throws Exception {
+    public CourseCommentDTO addComment(Integer courseId, UUID userId, String content) {
         Course course = getCourse(courseId);
         User user = getUser(userId);
 
@@ -139,16 +125,12 @@ public class CourseInteractionService {
                 .build();
 
         CourseComment saved = courseCommentRepository.save(comment);
-        log.info("Commentaire ajouté: userId={}, courseId={}, commentId={}", userId, courseId, saved.getId());
+        log.info("Commentaire ajouté : userId={}, courseId={}, commentId={}", userId, courseId, saved.getId());
         return CourseCommentDTO.fromEntity(saved);
     }
 
-    /**
-     * Met à jour le contenu d'un commentaire.
-     * Seul l'auteur du commentaire peut le modifier.
-     */
     @Transactional
-    public CourseCommentDTO updateComment(Long commentId, UUID userId, String content) throws Exception {
+    public CourseCommentDTO updateComment(Long commentId, UUID userId, String content) throws AccessDeniedException {
         CourseComment comment = courseCommentRepository.findById(commentId)
                 .orElseThrow(() -> new ResourceNotFoundException("Commentaire non trouvé"));
 
@@ -158,16 +140,15 @@ public class CourseInteractionService {
 
         comment.setContent(content.trim());
         CourseComment saved = courseCommentRepository.save(comment);
-        log.info("Commentaire mis à jour: commentId={}, userId={}", commentId, userId);
+        log.info("Commentaire mis à jour : commentId={}, userId={}", commentId, userId);
         return CourseCommentDTO.fromEntity(saved);
     }
 
     /**
-     * Supprime un commentaire.
-     * Seul l'auteur du commentaire peut le supprimer.
+     * Suppression par l'auteur du commentaire.
      */
     @Transactional
-    public void deleteComment(Long commentId, UUID userId) throws Exception {
+    public void deleteComment(Long commentId, UUID userId) throws AccessDeniedException {
         CourseComment comment = courseCommentRepository.findById(commentId)
                 .orElseThrow(() -> new ResourceNotFoundException("Commentaire non trouvé"));
 
@@ -176,15 +157,22 @@ public class CourseInteractionService {
         }
 
         courseCommentRepository.delete(comment);
-        log.info("Commentaire supprimé: commentId={}, userId={}", commentId, userId);
+        log.info("Commentaire supprimé par son auteur : commentId={}, userId={}", commentId, userId);
     }
 
     /**
-     * Récupère tous les commentaires d'un cours, triés du plus récent au plus ancien.
+     * Suppression par un administrateur (sans vérification de propriété).
      */
+    @Transactional
+    public void deleteCommentAsAdmin(Long commentId) {
+        CourseComment comment = courseCommentRepository.findById(commentId)
+                .orElseThrow(() -> new ResourceNotFoundException("Commentaire non trouvé"));
+        courseCommentRepository.delete(comment);
+        log.info("Commentaire supprimé par admin : commentId={}", commentId);
+    }
+
     @Transactional(readOnly = true)
     public List<CourseCommentDTO> getComments(Integer courseId) {
-        // Vérifie que le cours existe
         if (!courseRepository.existsById(courseId)) {
             throw new ResourceNotFoundException("Cours non trouvé");
         }
@@ -194,16 +182,13 @@ public class CourseInteractionService {
                 .collect(Collectors.toList());
     }
 
-    /**
-     * Récupère tous les commentaires des étudiants sur un cours, réservé à l'enseignant propriétaire.
-     * Vérifie que l'enseignant est bien l'auteur du cours avant de retourner les commentaires.
-     */
     @Transactional(readOnly = true)
-    public List<CourseCommentDTO> getCourseCommentsForTeacher(Integer courseId, UUID teacherId) throws java.nio.file.AccessDeniedException {
+    public List<CourseCommentDTO> getCourseCommentsForTeacher(Integer courseId, UUID teacherId)
+            throws AccessDeniedException {
         Course course = getCourse(courseId);
 
         if (!course.getAuthor().getId().equals(teacherId)) {
-            throw new java.nio.file.AccessDeniedException(
+            throw new AccessDeniedException(
                     "Seul l'enseignant auteur du cours peut consulter les commentaires depuis ce point d'accès");
         }
 
