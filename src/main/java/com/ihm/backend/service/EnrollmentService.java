@@ -48,23 +48,32 @@ public class EnrollmentService {
             throw new AccessDeniedException("Seuls les étudiants et les enseignants peuvent s'enrôler à des cours");
         }
 
-        // Vérifier que le cours existe et est publié
+        // Vérifier que le cours existe
         Course course = courseRepository.findById(courseId)
                 .orElseThrow(() -> new ResourceNotFoundException("Cours non trouvé"));
 
-        if (course.getStatus() != CourseStatus.PUBLISHED) {
-            throw new IllegalStateException("Ce cours n'est pas encore publié");
+        // Autoriser l'enrôlement si le cours est publié OU si l'utilisateur est un enseignant (pour collaboration)
+        if (course.getStatus() != CourseStatus.PUBLISHED && user.getRole() != UserRole.TEACHER) {
+            throw new IllegalStateException("Ce cours n'est pas encore accessible");
         }
 
-        // Un enseignant ne peut pas s'enrôler à son propre cours
+        // Un enseignant ne peut pas s'enrôler à son propre cours en tant qu'étudiant,
+        // mais il peut être ajouté comme collaborateur (géré par une autre méthode normalement)
         if (user.getRole() == UserRole.TEACHER && course.getAuthor() != null
                 && course.getAuthor().getId().equals(userId)) {
-            throw new AccessDeniedException("Un enseignant ne peut pas s'enrôler à son propre cours");
+            throw new AccessDeniedException("Vous êtes déjà l'auteur de ce cours");
         }
 
-        // Vérifier qu'il n'y a pas de doublon
-        if (enrollmentRepository.existsByCourse_IdAndUser_Id(courseId, userId)) {
-            throw new IllegalStateException("Vous êtes déjà enrôlé à ce cours");
+        // Vérifier s'il y a déjà un enrôlement
+        Optional<Enrollment> existingEnrollment = enrollmentRepository.findByCourse_IdAndUser_Id(courseId, userId);
+        if (existingEnrollment.isPresent()) {
+            Enrollment enrollment = existingEnrollment.get();
+            // Si l'utilisateur était invité, on valide simplement son enrôlement
+            if (enrollment.getStatus() == com.ihm.backend.enums.EnrollmentStatus.INVITED) {
+                enrollment.setStatus(com.ihm.backend.enums.EnrollmentStatus.APPROVED);
+                return EnrollmentDTO.fromEntity(enrollmentRepository.save(enrollment));
+            }
+            throw new IllegalStateException("Vous êtes déjà inscrit à ce cours");
         }
 
         // Les enseignants sont automatiquement approuvés ; les étudiants restent PENDING
