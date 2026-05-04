@@ -176,8 +176,12 @@ public class CourseService {
         Course course = courseRepository.findById(courseId)
                 .orElseThrow(() -> new ResourceNotFoundException("Cours non trouvé"));
 
-        if (!course.getAuthor().getId().equals(teacherId)) {
-            throw new AccessDeniedException("Vous ne pouvez modifier que vos propres cours");
+        boolean isAuthor = course.getAuthor().getId().equals(teacherId);
+        boolean isEditor = course.getEditors() != null && 
+                          course.getEditors().stream().anyMatch(u -> u.getId().equals(teacherId));
+
+        if (!isAuthor && !isEditor) {
+            throw new AccessDeniedException("Vous ne pouvez modifier que vos propres cours ou ceux dont vous êtes collaborateur");
         }
     }
 
