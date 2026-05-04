@@ -188,12 +188,15 @@ public class EnrollmentService {
         Enrollment enrollment = enrollmentRepository.findById(enrollmentId)
                 .orElseThrow(() -> new ResourceNotFoundException("Enrôlement non trouvé"));
 
-        // Vérifier que le validateur est le propriétaire du cours
-        if (!enrollment.getCourse().getAuthor().getId().equals(validatorId)) {
-            // TODO: Ajouter vérification ADMIN si nécessaire
-            log.warn("L'utilisateur {} a tenté de valider l'enrôlement {} sans être l'auteur du cours", validatorId,
+        // Vérifier que le validateur est le propriétaire ou un éditeur du cours
+        boolean isAuthor = enrollment.getCourse().getAuthor().getId().equals(validatorId);
+        boolean isEditor = enrollment.getCourse().getEditors() != null &&
+                          enrollment.getCourse().getEditors().stream().anyMatch(u -> u.getId().equals(validatorId));
+
+        if (!isAuthor && !isEditor) {
+            log.warn("L'utilisateur {} a tenté de valider l'enrôlement {} sans avoir les droits", validatorId,
                     enrollmentId);
-            throw new AccessDeniedException("Vous n'êtes pas l'auteur de ce cours");
+            throw new AccessDeniedException("Vous n'avez pas les droits pour valider cet enrôlement");
         }
 
         enrollment.setStatus(newStatus);
@@ -268,9 +271,13 @@ public class EnrollmentService {
         Course course = courseRepository.findById(courseId)
                 .orElseThrow(() -> new ResourceNotFoundException("Cours non trouvé"));
 
-        // Seul l'auteur ou un admin peut inviter
-        if (!course.getAuthor().getId().equals(inviterId)) {
-            throw new AccessDeniedException("Seul l'auteur du cours peut inviter des collaborateurs");
+        // Seul l'auteur, un éditeur ou un admin peut inviter
+        boolean isAuthor = course.getAuthor().getId().equals(inviterId);
+        boolean isEditor = course.getEditors() != null &&
+                          course.getEditors().stream().anyMatch(u -> u.getId().equals(inviterId));
+
+        if (!isAuthor && !isEditor) {
+            throw new AccessDeniedException("Vous n'avez pas les droits pour inviter des collaborateurs à ce cours");
         }
 
         User invitedUser = userRepository.findByEmail(email)
