@@ -172,6 +172,7 @@ public class CourseService {
     /**
      * Valide que l'enseignant est propriétaire du cours
      */
+    @Transactional(readOnly = true)
     public void validateOwnership(Integer courseId, UUID teacherId) throws Exception {
         Course course = courseRepository.findById(courseId)
                 .orElseThrow(() -> new ResourceNotFoundException("Cours non trouvé"));
