@@ -9,15 +9,18 @@ public class LockService {
     private final ConcurrentHashMap<Long, String> locks = new ConcurrentHashMap<>();
 
     public boolean acquireLock(Long granuleId, String userEmail) {
+        if (granuleId == null) return true; // Si pas d'ID de granule, l'action est autorisée par défaut
         String currentOwner = locks.putIfAbsent(granuleId, userEmail);
         return currentOwner == null || currentOwner.equals(userEmail);
     }
 
     public void releaseLock(Long granuleId, String userEmail) {
+        if (granuleId == null) return; // Rien à déverrouiller
         locks.remove(granuleId, userEmail);
     }
 
     public String getLockOwner(Long granuleId) {
+        if (granuleId == null) return null;
         return locks.get(granuleId);
     }
 
