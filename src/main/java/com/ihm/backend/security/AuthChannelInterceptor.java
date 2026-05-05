@@ -112,7 +112,13 @@ public class AuthChannelInterceptor implements ChannelInterceptor {
             return true;
         }
 
-        // Est-ce un collaborateur inscrit/invité ?
+        // Est-ce un éditeur (collaborateur direct) ?
+        if (exercise.getCourse().getEditors() != null && 
+            exercise.getCourse().getEditors().stream().anyMatch(u -> u.getEmail().equals(userEmail))) {
+            return true;
+        }
+
+        // Est-ce un collaborateur inscrit/invité via enrôlement ?
         return enrollmentRepository.findByCourse_IdAndUser_Id(
                 exercise.getCourse().getId(), 
                 user.getId()
