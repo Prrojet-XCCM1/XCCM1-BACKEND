@@ -8,6 +8,9 @@ import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.List;
 import java.util.stream.Collectors;
+import com.fasterxml.jackson.core.type.TypeReference;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import org.springframework.scheduling.annotation.Async;
 
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
@@ -47,6 +50,8 @@ public class CourseService {
     private com.ihm.backend.repository.elasticsearch.CourseSearchRepository courseSearchRepository;
     @Autowired
     private LLMIndexingService llmIndexingService;
+    @Autowired
+    private ObjectMapper objectMapper;
 
     public List<Course> searchCourses(String query) {
         try {
@@ -259,5 +264,21 @@ public class CourseService {
 
     public List<Map<String, Object>> getRecommendations(String title, String description) {
         return llmIndexingService.recommendCourses(title, description);
+    }
+
+    @Async("taskExecutor")
+    @Transactional
+    public void saveContentAsync(Integer courseId, String content) {
+        log.info("Saving content for course {} asynchronously", courseId);
+        courseRepository.findById(courseId).ifPresent(course -> {
+            try {
+                Map<String, Object> contentMap = objectMapper.readValue(content, new TypeReference<>() {});
+                course.setContent(contentMap);
+                courseRepository.save(course);
+                log.info("Course {} content saved successfully", courseId);
+            } catch (Exception e) {
+                log.error("Failed to save course {} content: {}", courseId, e.getMessage());
+            }
+        });
     }
 }

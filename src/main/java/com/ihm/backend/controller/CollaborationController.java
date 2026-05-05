@@ -6,8 +6,7 @@ import com.ihm.backend.entity.User;
 import com.ihm.backend.enums.EnrollmentStatus;
 import com.ihm.backend.repository.jpa.CourseRepository;
 import com.ihm.backend.repository.jpa.EnrollmentRepository;
-import com.fasterxml.jackson.databind.ObjectMapper;
-import com.fasterxml.jackson.core.type.TypeReference;
+import com.ihm.backend.service.CourseService;
 import com.ihm.backend.service.LockService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -16,11 +15,12 @@ import org.springframework.messaging.handler.annotation.MessageExceptionHandler;
 import org.springframework.messaging.handler.annotation.MessageMapping;
 import org.springframework.messaging.handler.annotation.Payload;
 import org.springframework.messaging.simp.SimpMessagingTemplate;
-import org.springframework.scheduling.annotation.Async;
 import org.springframework.security.core.Authentication;
 import org.springframework.stereotype.Controller;
 
 import java.util.Optional;
+import java.util.Set;
+import java.util.concurrent.ConcurrentHashMap;
 
 @Controller
 @RequiredArgsConstructor
@@ -29,9 +29,12 @@ public class CollaborationController {
 
     private final SimpMessagingTemplate messagingTemplate;
     private final LockService lockService;
+    private final CourseService courseService;
     private final CourseRepository courseRepository;
     private final EnrollmentRepository enrollmentRepository;
-    private final ObjectMapper objectMapper;
+
+    // Cache "email:courseId" → autorisé, pour éviter une requête DB à chaque message CURSOR/BLOCK_UPDATE
+    private final Set<String> authorizedCache = ConcurrentHashMap.newKeySet();
 
     @MessageMapping("/projet/{id}/action")
     public void handleAction(@DestinationVariable Integer id, @Payload CollaborationMessage message, Authentication authentication) {
@@ -42,11 +45,15 @@ public class CollaborationController {
 
         User user = (User) authentication.getPrincipal();
         String userEmail = user.getEmail();
-        
-        // --- Vérification de l'Autorisation ---
-        if (!isAuthorized(id, user)) {
-            sendError(userEmail, "Non autorisé à modifier ce document");
-            return;
+
+        // Vérifier l'autorisation avec cache en mémoire (évite N requêtes DB par seconde)
+        String cacheKey = userEmail + ":" + id;
+        if (!authorizedCache.contains(cacheKey)) {
+            if (!isAuthorized(id, user)) {
+                sendError(userEmail, "Non autorisé à modifier ce document");
+                return;
+            }
+            authorizedCache.add(cacheKey);
         }
 
         message.setSenderEmail(userEmail);
@@ -64,9 +71,8 @@ public class CollaborationController {
             case UNLOCK:
                 lockService.releaseLock(message.getGranuleId(), userEmail);
                 messagingTemplate.convertAndSend("/topic/projet/" + id, message);
-                // Sauvegarde asynchrone si du contenu est envoyé
                 if (message.getContent() != null) {
-                    saveContentAsync(id, message.getContent());
+                    courseService.saveContentAsync(id, message.getContent());
                 }
                 break;
 
@@ -95,22 +101,6 @@ public class CollaborationController {
                 .content(errorMessage)
                 .build();
         messagingTemplate.convertAndSendToUser(userEmail, "/queue/errors", error);
-    }
-
-    @Async
-    public void saveContentAsync(Integer courseId, String content) {
-        log.info("Saving content for course {} asynchronously", courseId);
-        courseRepository.findById(courseId).ifPresent(course -> {
-            try {
-                // Convert string content to Map for the JSON column
-                java.util.Map<String, Object> contentMap = objectMapper.readValue(content, new TypeReference<java.util.Map<String, Object>>() {});
-                course.setContent(contentMap);
-                courseRepository.save(course);
-                log.info("Course {} content saved successfully", courseId);
-            } catch (Exception e) {
-                log.error("Failed to parse or save course content for course {}: {}", courseId, e.getMessage());
-            }
-        });
     }
 
     private boolean isAuthorized(Integer courseId, User user) {
