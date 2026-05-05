@@ -47,6 +47,8 @@ public class EnrichedCourseResponse {
     private Long likeCount;
     private Long downloadCount;
     
+    private java.util.Map<String, Object> content; // <-- AJOUT DU CONTENU MANQUANT
+    
     /**
      * Crée un EnrichedCourseResponse à partir d'un cours et d'un enrôlement optionnel
      */
@@ -65,6 +67,7 @@ public class EnrichedCourseResponse {
                 .viewCount(course.getViewCount())
                 .likeCount(course.getLikeCount())
                 .downloadCount(course.getDownloadCount())
+                .content(course.getContent()) // <-- MAPPAGE DU CONTENU
                 .build();
     }
 }
