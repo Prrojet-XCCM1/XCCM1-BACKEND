@@ -35,7 +35,17 @@ public interface CourseMapper {
     @Mapping(target = "createdAt", ignore = true)
     @Mapping(target = "publishedAt", ignore = true)
     @Mapping(target = "viewCount", ignore = true)
-
+    @Mapping(target = "content", ignore = true) // Ignorer pour le forcer manuellement et déclencher la sauvegarde
     void updateEntity(CourseUpdateRequest dto, @MappingTarget Course entity);
 
+    @org.mapstruct.AfterMapping
+    default void updateContent(CourseUpdateRequest dto, @MappingTarget Course entity) {
+        if (dto.getContent() != null) {
+            // Instancier une NOUVELLE Map pour forcer le Dirty Checking d'Hibernate
+            // Sinon, map.clear() puis map.putAll() est ignoré par PostgreSQL
+            entity.setContent(new java.util.LinkedHashMap<>(dto.getContent()));
+        } else {
+            entity.setContent(null);
+        }
+    }
 }
