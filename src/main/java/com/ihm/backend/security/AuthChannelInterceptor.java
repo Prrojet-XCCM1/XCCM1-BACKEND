@@ -30,7 +30,7 @@ public class AuthChannelInterceptor implements ChannelInterceptor {
 
     private final JwtService jwtService;
     private final UserDetailsService userDetailsService;
-    private final ExerciseRepository exerciseRepository;
+    private final com.ihm.backend.repository.jpa.CourseRepository courseRepository;
     private final EnrollmentRepository enrollmentRepository;
 
     @Override
@@ -77,23 +77,22 @@ public class AuthChannelInterceptor implements ChannelInterceptor {
         if (destination.startsWith("/topic/projet/")) {
             try {
                 String idPart = destination.substring("/topic/projet/".length());
-                // Handle potential sub-paths like /topic/projet/1/presence
                 if (idPart.contains("/")) {
                     idPart = idPart.substring(0, idPart.indexOf("/"));
                 }
-                Integer exerciseId = Integer.parseInt(idPart);
+                Integer courseId = Integer.parseInt(idPart);
                 
-                if (!isAuthorized(exerciseId, authentication)) {
+                if (!isAuthorized(courseId, authentication)) {
                     log.warn("User {} denied subscription to {}", authentication.getName(), destination);
                     throw new AccessDeniedException("Pas autorisé à s'abonner à ce projet");
                 }
             } catch (NumberFormatException e) {
-                log.error("Invalid exercise ID in destination: {}", destination);
+                log.error("Invalid project ID in destination: {}", destination);
             }
         }
     }
 
-    private boolean isAuthorized(Integer exerciseId, Authentication authentication) {
+    private boolean isAuthorized(Integer courseId, Authentication authentication) {
         Object principal = authentication.getPrincipal();
         if (!(principal instanceof User)) {
             return false;
@@ -101,26 +100,25 @@ public class AuthChannelInterceptor implements ChannelInterceptor {
         User user = (User) principal;
         String userEmail = user.getEmail();
 
-        Optional<Exercise> exerciseOpt = exerciseRepository.findById(exerciseId);
-        if (exerciseOpt.isEmpty()) return false;
+        Optional<com.ihm.backend.entity.Course> courseOpt = courseRepository.findById(courseId);
+        if (courseOpt.isEmpty()) return false;
         
-        Exercise exercise = exerciseOpt.get();
-        if (exercise.getCourse() == null) return false;
+        com.ihm.backend.entity.Course course = courseOpt.get();
 
         // Est-ce l'auteur ?
-        if (exercise.getCourse().getAuthor().getEmail().equals(userEmail)) {
+        if (course.getAuthor() != null && course.getAuthor().getEmail().equals(userEmail)) {
             return true;
         }
 
         // Est-ce un éditeur (collaborateur direct) ?
-        if (exercise.getCourse().getEditors() != null && 
-            exercise.getCourse().getEditors().stream().anyMatch(u -> u.getEmail().equals(userEmail))) {
+        if (course.getEditors() != null && 
+            course.getEditors().stream().anyMatch(u -> u.getEmail().equals(userEmail))) {
             return true;
         }
 
         // Est-ce un collaborateur inscrit/invité via enrôlement ?
         return enrollmentRepository.findByCourse_IdAndUser_Id(
-                exercise.getCourse().getId(), 
+                course.getId(), 
                 user.getId()
         ).map(enrollment -> 
                 enrollment.getStatus() == EnrollmentStatus.APPROVED || 
