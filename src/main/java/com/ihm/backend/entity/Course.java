@@ -14,6 +14,8 @@ import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
 import jakarta.persistence.JoinColumn;
+import jakarta.persistence.JoinTable;
+import jakarta.persistence.ManyToMany;
 import jakarta.persistence.ManyToOne;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
@@ -77,11 +79,11 @@ public class Course {
     @Builder.Default
     private Long downloadCount = 0L;
 
-    @jakarta.persistence.ManyToMany(fetch = jakarta.persistence.FetchType.EAGER)
-    @jakarta.persistence.JoinTable(
+    @ManyToMany(fetch = FetchType.EAGER)
+    @JoinTable(
         name = "course_editors",
-        joinColumns = @jakarta.persistence.JoinColumn(name = "course_id"),
-        inverseJoinColumns = @jakarta.persistence.JoinColumn(name = "user_id")
+        joinColumns = @JoinColumn(name = "course_id"),
+        inverseJoinColumns = @JoinColumn(name = "user_id")
     )
     private java.util.List<User> editors;
 }
