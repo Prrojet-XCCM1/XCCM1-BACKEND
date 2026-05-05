@@ -11,7 +11,7 @@ import lombok.NoArgsConstructor;
 @AllArgsConstructor
 public class CollaborationMessage {
     public enum MessageType {
-        MOVE, LOCK, UNLOCK, CURSOR, ERROR
+        MOVE, LOCK, UNLOCK, CURSOR, BLOCK_UPDATE, ERROR
     }
 
     private MessageType type;
