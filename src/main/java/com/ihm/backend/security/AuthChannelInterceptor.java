@@ -49,21 +49,30 @@ public class AuthChannelInterceptor implements ChannelInterceptor {
 
     private void authenticateConnection(StompHeaderAccessor accessor) {
         String authHeader = accessor.getFirstNativeHeader("Authorization");
-        
-        if (authHeader != null && authHeader.startsWith("Bearer ")) {
-            String jwt = authHeader.substring(7);
-            String userEmail = jwtService.extractUsername(jwt);
-            
-            if (userEmail != null) {
-                UserDetails userDetails = userDetailsService.loadUserByUsername(userEmail);
-                if (jwtService.isTokenValid(jwt, userDetails)) {
-                    UsernamePasswordAuthenticationToken authentication = new UsernamePasswordAuthenticationToken(
-                            userDetails, null, userDetails.getAuthorities());
-                    accessor.setUser(authentication);
-                    log.info("WebSocket user {} authenticated", userEmail);
-                }
-            }
+
+        if (authHeader == null || !authHeader.startsWith("Bearer ")) {
+            log.warn("Tentative de connexion WebSocket sans JWT — connexion refusée");
+            throw new AccessDeniedException("Authentification requise : header Authorization manquant");
         }
+
+        String jwt = authHeader.substring(7);
+        String userEmail = jwtService.extractUsername(jwt);
+
+        if (userEmail == null) {
+            log.warn("JWT invalide ou malformé lors de la connexion WebSocket");
+            throw new AccessDeniedException("JWT invalide");
+        }
+
+        UserDetails userDetails = userDetailsService.loadUserByUsername(userEmail);
+        if (!jwtService.isTokenValid(jwt, userDetails)) {
+            log.warn("JWT expiré ou révoqué pour l'utilisateur {} lors de la connexion WebSocket", userEmail);
+            throw new AccessDeniedException("JWT expiré ou révoqué");
+        }
+
+        UsernamePasswordAuthenticationToken authentication = new UsernamePasswordAuthenticationToken(
+                userDetails, null, userDetails.getAuthorities());
+        accessor.setUser(authentication);
+        log.info("WebSocket user {} authentifié", userEmail);
     }
 
     private void authorizeSubscription(StompHeaderAccessor accessor) {

@@ -52,6 +52,10 @@ services:
   backend:
     image: ${DOCKER_IMAGE}
     container_name: xccm-backend
+    ports:
+      # Exposé uniquement sur loopback → Nginx y accède via 127.0.0.1:8080
+      # Non accessible depuis l'extérieur directement (sécurisé)
+      - "127.0.0.1:8080:8080"
     environment:
       DB_URL: jdbc:postgresql://xccm-postgres:5432/${POSTGRES_DB:-xccm}
       DB_USERNAME: ${POSTGRES_USER:-admin}
