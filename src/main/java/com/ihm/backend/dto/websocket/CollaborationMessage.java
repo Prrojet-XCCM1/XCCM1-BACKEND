@@ -18,6 +18,6 @@ public class CollaborationMessage {
     private String content;
     private String senderEmail;
     private String senderName;
-    private Long granuleId;
+    private String granuleId;
     private Object payload; // For dynamic data like coordinates or content deltas
 }
