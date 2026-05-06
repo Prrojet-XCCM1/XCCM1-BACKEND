@@ -1,5 +1,7 @@
 package com.ihm.backend.controller;
 
+import com.github.benmanes.caffeine.cache.Cache;
+import com.github.benmanes.caffeine.cache.Caffeine;
 import com.ihm.backend.dto.websocket.CollaborationMessage;
 import com.ihm.backend.entity.Course;
 import com.ihm.backend.entity.User;
@@ -19,8 +21,7 @@ import org.springframework.security.core.Authentication;
 import org.springframework.stereotype.Controller;
 
 import java.util.Optional;
-import java.util.Set;
-import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.TimeUnit;
 
 @Controller
 @RequiredArgsConstructor
@@ -33,8 +34,15 @@ public class CollaborationController {
     private final CourseRepository courseRepository;
     private final EnrollmentRepository enrollmentRepository;
 
-    // Cache "email:courseId" → autorisé, pour éviter une requête DB à chaque message CURSOR/BLOCK_UPDATE
-    private final Set<String> authorizedCache = ConcurrentHashMap.newKeySet();
+    /**
+     * Cache d'autorisation "email:courseId" → true.
+     * TTL de 5 minutes : les révocations d'accès sont prises en compte dans ce délai.
+     * Taille max de 10 000 entrées pour éviter toute fuite mémoire.
+     */
+    private final Cache<String, Boolean> authorizedCache = Caffeine.newBuilder()
+            .expireAfterWrite(5, TimeUnit.MINUTES)
+            .maximumSize(10_000)
+            .build();
 
     @MessageMapping("/projet/{id}/action")
     public void handleAction(@DestinationVariable Integer id, @Payload CollaborationMessage message, Authentication authentication) {
@@ -46,14 +54,14 @@ public class CollaborationController {
         User user = (User) authentication.getPrincipal();
         String userEmail = user.getEmail();
 
-        // Vérifier l'autorisation avec cache en mémoire (évite N requêtes DB par seconde)
+        // Vérifier l'autorisation avec cache Caffeine (TTL 5 min, max 10 000 entrées)
         String cacheKey = userEmail + ":" + id;
-        if (!authorizedCache.contains(cacheKey)) {
+        if (authorizedCache.getIfPresent(cacheKey) == null) {
             if (!isAuthorized(id, user)) {
                 sendError(userEmail, "Non autorisé à modifier ce document");
                 return;
             }
-            authorizedCache.add(cacheKey);
+            authorizedCache.put(cacheKey, Boolean.TRUE);
         }
 
         message.setSenderEmail(userEmail);
@@ -76,12 +84,26 @@ public class CollaborationController {
                 }
                 break;
 
+            case BLOCK_UPDATE:
+                // Vérifier que l'utilisateur possède le verrou avant de broadcaster une mise à jour
+                String blockOwner = lockService.getLockOwner(message.getGranuleId());
+                if (blockOwner == null || !blockOwner.equals(userEmail)) {
+                    sendError(userEmail, "Vous ne possédez pas le verrou pour l'élément " + message.getGranuleId());
+                    return;
+                }
+                messagingTemplate.convertAndSend("/topic/projet/" + id, message);
+                // Persistance asynchrone du contenu à chaque mise à jour de bloc
+                if (message.getContent() != null) {
+                    courseService.saveContentAsync(id, message.getContent());
+                }
+                break;
+
             case MOVE:
             case CURSOR:
                 // Vérifier si l'utilisateur possède le verrou avant de diffuser un MOVE
                 if (message.getType() == CollaborationMessage.MessageType.MOVE) {
-                    String owner = lockService.getLockOwner(message.getGranuleId());
-                    if (owner == null || !owner.equals(userEmail)) {
+                    String moveOwner = lockService.getLockOwner(message.getGranuleId());
+                    if (moveOwner == null || !moveOwner.equals(userEmail)) {
                         sendError(userEmail, "Vous ne possédez pas le verrou pour cet élément");
                         return;
                     }
@@ -90,6 +112,7 @@ public class CollaborationController {
                 break;
 
             default:
+                log.warn("Type de message non reconnu '{}' de {} sur le projet {}", message.getType(), userEmail, id);
                 messagingTemplate.convertAndSend("/topic/projet/" + id, message);
                 break;
         }
@@ -106,7 +129,7 @@ public class CollaborationController {
     private boolean isAuthorized(Integer courseId, User user) {
         Optional<Course> courseOpt = courseRepository.findById(courseId);
         if (courseOpt.isEmpty()) return false;
-        
+
         Course course = courseOpt.get();
 
         // Est-ce l'auteur ?
@@ -115,17 +138,17 @@ public class CollaborationController {
         }
 
         // Est-ce un éditeur (collaborateur direct) ?
-        if (course.getEditors() != null && 
+        if (course.getEditors() != null &&
             course.getEditors().stream().anyMatch(u -> u.getEmail().equals(user.getEmail()))) {
             return true;
         }
 
         // Est-ce un collaborateur inscrit/invité via enrôlement ?
         return enrollmentRepository.findByCourse_IdAndUser_Id(
-                course.getId(), 
+                course.getId(),
                 user.getId()
-        ).map(enrollment -> 
-                enrollment.getStatus() == EnrollmentStatus.APPROVED || 
+        ).map(enrollment ->
+                enrollment.getStatus() == EnrollmentStatus.APPROVED ||
                 enrollment.getStatus() == EnrollmentStatus.INVITED
         ).orElse(false);
     }
@@ -138,5 +161,3 @@ public class CollaborationController {
         }
     }
 }
-
-
