@@ -11,6 +11,7 @@ import java.util.stream.Collectors;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.springframework.scheduling.annotation.Async;
+import com.ihm.backend.enums.EnrollmentStatus;
 
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
@@ -178,15 +179,18 @@ public class CourseService {
      * Valide que l'enseignant est propriétaire du cours
      */
     @Transactional(readOnly = true)
-    public void validateOwnership(Integer courseId, UUID teacherId) throws Exception {
+    public void validateOwnership(Integer courseId, UUID userId) throws Exception {
         Course course = courseRepository.findById(courseId)
                 .orElseThrow(() -> new ResourceNotFoundException("Cours non trouvé"));
 
-        boolean isAuthor = course.getAuthor().getId().equals(teacherId);
-        boolean isEditor = course.getEditors() != null && 
-                          course.getEditors().stream().anyMatch(u -> u.getId().equals(teacherId));
+        boolean isAuthor = course.getAuthor().getId().equals(userId);
+        boolean isEditor = course.getEditors() != null &&
+                          course.getEditors().stream().anyMatch(u -> u.getId().equals(userId));
+        boolean isCollaborator = enrollmentRepository.findByCourse_IdAndUser_Id(courseId, userId)
+                .map(e -> e.getStatus() == EnrollmentStatus.APPROVED || e.getStatus() == EnrollmentStatus.INVITED)
+                .orElse(false);
 
-        if (!isAuthor && !isEditor) {
+        if (!isAuthor && !isEditor && !isCollaborator) {
             throw new AccessDeniedException("Vous ne pouvez modifier que vos propres cours ou ceux dont vous êtes collaborateur");
         }
     }
