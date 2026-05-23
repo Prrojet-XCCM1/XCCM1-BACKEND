@@ -192,11 +192,13 @@ public class CourseController {
     }
 
     @PreAuthorize("hasRole('TEACHER')")
-    @GetMapping("/recommend")
+    @PostMapping("/recommend")
     public ResponseEntity<ApiResponse<List<Map<String, Object>>>> getRecommendations(
-            @RequestParam String title,
-            @RequestParam(required = false) String description) {
+            @RequestBody(required = false) com.ihm.backend.dto.request.RecommendationRequest request) {
+        if (request == null) {
+            return ResponseEntity.ok(ApiResponse.success("Aucune donnée fournie", Collections.emptyList()));
+        }
         return ResponseEntity.ok(ApiResponse.success("Recommandations récupérées", 
-                courseService.getRecommendations(title, description)));
+                courseService.getRecommendations(request.getTitle(), request.getDescription(), request.getContent())));
     }
 }

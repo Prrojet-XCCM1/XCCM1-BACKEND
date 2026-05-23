@@ -87,23 +87,43 @@ public class LLMIndexingService {
         }
     }
 
-    public List<Map<String, Object>> recommendCourses(String title, String description) {
+    public List<Map<String, Object>> recommendCourses(String title, String description, String content) {
+        if (title == null || title.trim().isEmpty()) {
+            return Collections.emptyList();
+        }
+
         try {
             String url = llmServiceUrl + "/api/v1/index/recommend-courses";
+            log.info("Requesting recommendations from LLM at: {} for title: {}", url, title);
             
             Map<String, Object> body = new HashMap<>();
             body.put("title", title);
             body.put("description", description != null ? description : "");
+            body.put("content", content != null ? content : "");
             body.put("top_k", 5);
 
             HttpHeaders headers = new HttpHeaders();
             headers.setContentType(MediaType.APPLICATION_JSON);
             HttpEntity<Map<String, Object>> entity = new HttpEntity<>(body, headers);
             
-            ResponseEntity<List> response = restTemplate.postForEntity(url, entity, List.class);
-            return (List<Map<String, Object>>) response.getBody();
+            ResponseEntity<Object> response = restTemplate.postForEntity(url, entity, Object.class);
+            Object responseBody = response.getBody();
+
+            if (responseBody instanceof List) {
+                return (List<Map<String, Object>>) responseBody;
+            } else if (responseBody instanceof Map) {
+                Map<String, Object> map = (Map<String, Object>) responseBody;
+                if (map.containsKey("recommendations") && map.get("recommendations") instanceof List) {
+                    return (List<Map<String, Object>>) map.get("recommendations");
+                } else if (map.containsKey("data") && map.get("data") instanceof List) {
+                    return (List<Map<String, Object>>) map.get("data");
+                }
+            }
+            
+            log.warn("Unexpected response format from LLM service: {}", responseBody != null ? responseBody.getClass().getName() : "null");
+            return Collections.emptyList();
         } catch (Exception e) {
-            log.error("Failed to get course recommendations: {}", e.getMessage());
+            log.error("Failed to get course recommendations from LLM service at {}: {}", llmServiceUrl, e.getMessage());
             return Collections.emptyList();
         }
     }
