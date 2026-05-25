@@ -13,7 +13,8 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import org.springframework.scheduling.annotation.Async;
 import com.ihm.backend.enums.EnrollmentStatus;
 
-import org.springframework.beans.factory.annotation.Autowired;
+import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.multipart.MultipartFile;
@@ -27,37 +28,28 @@ import com.ihm.backend.mappers.CourseMapper;
 import com.ihm.backend.repository.jpa.CourseRepository;
 import com.ihm.backend.repository.jpa.EnrollmentRepository;
 import com.ihm.backend.repository.jpa.UserRepository;
+import com.ihm.backend.repository.elasticsearch.CourseSearchRepository;
 
 import java.util.UUID;
 import com.ihm.backend.entity.*;
 import com.ihm.backend.enums.CourseStatus;
 
-import lombok.extern.slf4j.Slf4j;
-
 @Slf4j
 @Service
+@RequiredArgsConstructor
 public class CourseService {
-    @Autowired
-    private CourseMapper courseMapper;
-    @Autowired
-    private CourseRepository courseRepository;
-    @Autowired
-    private UserRepository userRepository;
-    @Autowired
-    private EnrollmentRepository enrollmentRepository;
-    @Autowired
-    private NotificationService notificationService;
-    @Autowired
-    private com.ihm.backend.repository.elasticsearch.CourseSearchRepository courseSearchRepository;
-    @Autowired
-    private LLMIndexingService llmIndexingService;
-    @Autowired
-    private ObjectMapper objectMapper;
+    private final CourseMapper courseMapper;
+    private final CourseRepository courseRepository;
+    private final UserRepository userRepository;
+    private final EnrollmentRepository enrollmentRepository;
+    private final NotificationService notificationService;
+    private final CourseSearchRepository courseSearchRepository;
+    private final LLMIndexingService llmIndexingService;
+    private final ObjectMapper objectMapper;
 
     public List<Course> searchCourses(String query) {
         try {
-            // Tentative de recherche via Elasticsearch
-            return (List<Course>) courseSearchRepository.findAll();
+            return courseSearchRepository.findByTitleContainingIgnoreCaseOrDescriptionContainingIgnoreCase(query, query);
         } catch (Exception e) {
             log.warn("Elasticsearch est indisponible pour la recherche de cours, repli sur JPA: {}", e.getMessage());
             return courseRepository.searchPublishedCourses(query);
@@ -149,30 +141,29 @@ public class CourseService {
 
     public List<CourseResponse> getCoursesByStatusForAuthor(UUID authorId, CourseStatus courseStatus)
             throws Exception {
-        List<Course> courses = courseRepository.findByStatus(courseStatus);
-        List<Course> result = courses.stream().filter(course -> course.getAuthor().getId().equals(authorId))
-                .collect(Collectors.toList());
-
-        return courseMapper.toResponse(result);
+        return courseMapper.toResponse(courseRepository.findByStatusAndAuthor_Id(courseStatus, authorId));
     }
 
     public CourseResponse uploadCoverImage(Integer courseId, MultipartFile image) throws Exception {
+        Course course = courseRepository.findById(courseId)
+                .orElseThrow(() -> new ResourceNotFoundException("Cours non trouvé"));
 
-        Course course = courseRepository.findById(courseId).orElseThrow(() -> new Exception());
+        String originalName = image.getOriginalFilename();
+        String extension = "";
+        if (originalName != null && originalName.contains(".")) {
+            String rawExt = originalName.substring(originalName.lastIndexOf(".") + 1);
+            extension = "." + rawExt.replaceAll("[^a-zA-Z0-9]", "").toLowerCase();
+        }
+        String fileName = UUID.randomUUID() + extension;
 
-        String fileName = image.getOriginalFilename();
         Path uploadDir = Paths.get("uploads");
         Files.createDirectories(uploadDir);
-
         Path filePath = uploadDir.resolve(fileName);
         Files.write(filePath, image.getBytes());
 
-        // Save path accessible from frontend
-        String urlPath = "/uploads/" + fileName;
-        course.setCoverImage(urlPath);
+        course.setCoverImage("/uploads/" + fileName);
         courseRepository.save(course);
         return courseMapper.toResponse(course);
-
     }
 
     /**

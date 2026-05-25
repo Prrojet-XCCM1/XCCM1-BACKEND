@@ -8,11 +8,10 @@ import com.ihm.backend.dto.response.EnrichedCourseResponse;
 import com.ihm.backend.entity.User;
 import com.ihm.backend.enums.CourseStatus;
 import com.ihm.backend.service.CourseService;
-import org.springframework.beans.factory.annotation.Autowired;
+import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
-import org.springframework.security.core.Authentication;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
@@ -23,10 +22,10 @@ import java.util.UUID;
 
 @RestController
 @RequestMapping("/courses")
+@RequiredArgsConstructor
 public class CourseController {
 
-    @Autowired
-    private CourseService courseService;
+    private final CourseService courseService;
 
     @PreAuthorize("hasRole('TEACHER')")
     @PostMapping("/{authorId}")
@@ -69,17 +68,6 @@ public class CourseController {
     }
 
     @PreAuthorize("hasRole('TEACHER')")
-    @GetMapping("/{courseId}/setStatus/{status}")
-    public ResponseEntity<ApiResponse<CourseResponse>> changeCourseStatus(@PathVariable Integer courseId,
-            @PathVariable CourseStatus status,
-            @AuthenticationPrincipal User currentUser) throws Exception {
-        courseService.validateOwnership(courseId, currentUser.getId());
-
-        return ResponseEntity.ok(ApiResponse.success("Statut du cours mis à jour avec succès",
-                courseService.changeCourseStatus(status, courseId)));
-    }
-
-    @PreAuthorize("hasRole('TEACHER')")
     @PatchMapping("/{courseId}/status")
     public ResponseEntity<ApiResponse<CourseResponse>> updateCourseStatus(@PathVariable Integer courseId,
             @RequestParam CourseStatus status,
@@ -97,7 +85,6 @@ public class CourseController {
                 courseService.getCoursesByStatusForAuthor(authorId, status)));
     }
 
-    @PreAuthorize("permitAll()")
     @GetMapping
     public ResponseEntity<ApiResponse<List<CourseResponse>>> getAllCourses() {
         return ResponseEntity
@@ -159,14 +146,12 @@ public class CourseController {
     }
 
 
-    @PreAuthorize("permitAll()")
     @PostMapping("/{courseId}/view")
     public ResponseEntity<ApiResponse<CourseResponse>> incrementViewCount(@PathVariable Integer courseId) throws Exception {
         return ResponseEntity.ok(ApiResponse.success("Nombre de vues incrémenté", 
                 courseService.incrementViewCount(courseId)));
     }
 
-    @PreAuthorize("permitAll()")
     @PostMapping("/{courseId}/like")
     public ResponseEntity<ApiResponse<CourseResponse>> incrementLikeCount(@PathVariable Integer courseId) throws Exception {
         return ResponseEntity.ok(ApiResponse.success("Nombre de likes incrémenté", 
@@ -177,14 +162,12 @@ public class CourseController {
 
    
 
-    @PreAuthorize("permitAll()")
     @PostMapping("/{courseId}/dislike")
     public ResponseEntity<ApiResponse<CourseResponse>> decrementLikeCount(@PathVariable Integer courseId) throws Exception {
         return ResponseEntity.ok(ApiResponse.success("Nombre de likes décrémenté", 
                 courseService.decrementLikeCount(courseId)));
     }
 
-    @PreAuthorize("permitAll()")
     @PostMapping("/{courseId}/download")
     public ResponseEntity<ApiResponse<CourseResponse>> incrementDownloadCount(@PathVariable Integer courseId) throws Exception {
         return ResponseEntity.ok(ApiResponse.success("Nombre de téléchargements incrémenté", 
