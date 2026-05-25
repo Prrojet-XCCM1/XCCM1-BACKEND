@@ -119,7 +119,7 @@ public class EnrollmentService {
      * Met à jour la progression d'un étudiant
      */
     @Transactional
-    public EnrollmentDTO updateProgress(Long enrollmentId, Double progress) throws Exception {
+    public EnrollmentDTO updateProgress(Long enrollmentId, Double progress, UUID userId) throws Exception {
         if (progress < 0 || progress > 100) {
             throw new IllegalArgumentException("La progression doit être entre 0 et 100");
         }
@@ -127,10 +127,13 @@ public class EnrollmentService {
         Enrollment enrollment = enrollmentRepository.findById(enrollmentId)
                 .orElseThrow(() -> new ResourceNotFoundException("Enrôlement non trouvé"));
 
+        if (!enrollment.getUser().getId().equals(userId)) {
+            throw new AccessDeniedException("Vous ne pouvez mettre à jour que votre propre progression");
+        }
+
         enrollment.setProgress(progress);
         enrollment.setLastAccessed(LocalDateTime.now());
 
-        // Marquer comme complété automatiquement si progression = 100%
         if (progress >= 100.0) {
             enrollment.setCompleted(true);
         }
@@ -145,9 +148,13 @@ public class EnrollmentService {
      * Marque un cours comme complété
      */
     @Transactional
-    public EnrollmentDTO markAsCompleted(Long enrollmentId) throws Exception {
+    public EnrollmentDTO markAsCompleted(Long enrollmentId, UUID userId) throws Exception {
         Enrollment enrollment = enrollmentRepository.findById(enrollmentId)
                 .orElseThrow(() -> new ResourceNotFoundException("Enrôlement non trouvé"));
+
+        if (!enrollment.getUser().getId().equals(userId)) {
+            throw new AccessDeniedException("Vous ne pouvez marquer que votre propre cours comme complété");
+        }
 
         enrollment.setCompleted(true);
         enrollment.setProgress(100.0);
