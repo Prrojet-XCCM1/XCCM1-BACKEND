@@ -257,8 +257,8 @@ public class CourseService {
         return courseMapper.toResponse(course);
     }
 
-    public List<Map<String, Object>> getRecommendations(String title, String description) {
-        return llmIndexingService.recommendCourses(title, description);
+    public List<Map<String, Object>> getRecommendations(String title, String description, String content) {
+        return llmIndexingService.recommendCourses(title, description, content);
     }
 
     @Async("taskExecutor")
