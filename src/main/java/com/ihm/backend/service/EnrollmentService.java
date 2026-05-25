@@ -169,6 +169,7 @@ public class EnrollmentService {
     /**
      * Récupère l'enrôlement d'un utilisateur pour un cours spécifique
      */
+    @Transactional(readOnly = true)
     public EnrollmentDTO getEnrollmentForUser(Integer courseId, UUID userId) {
         return enrollmentRepository.findByCourse_IdAndUser_Id(courseId, userId)
                 .map(EnrollmentDTO::fromEntity)
@@ -178,6 +179,7 @@ public class EnrollmentService {
     /**
      * Récupère tous les enrôlements d'un utilisateur
      */
+    @Transactional(readOnly = true)
     public List<EnrollmentDTO> getUserEnrollments(UUID userId) {
         return enrollmentRepository.findByUser_Id(userId)
                 .stream()
@@ -233,6 +235,7 @@ public class EnrollmentService {
     /**
      * Récupère les enrôlements en attente pour les cours d'un enseignant
      */
+    @Transactional(readOnly = true)
     public List<EnrollmentDTO> getPendingEnrollmentsForTeacher(UUID teacherId) {
         return enrollmentRepository
                 .findByCourse_Author_IdAndStatus(teacherId, com.ihm.backend.enums.EnrollmentStatus.PENDING)
