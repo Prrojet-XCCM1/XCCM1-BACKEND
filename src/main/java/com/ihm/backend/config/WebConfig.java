@@ -6,7 +6,6 @@ import org.springframework.web.servlet.config.annotation.WebMvcConfigurer;
 
 /**
  * Configuration Web MVC.
- *
  * <p>La configuration CORS est gérée exclusivement dans {@link SecurityConfig#corsConfigurationSource()}
  * via Spring Security, qui a priorité sur WebMvcConfigurer.addCorsMappings().
  * Ne pas dupliquer la config CORS ici.
