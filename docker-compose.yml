@@ -85,6 +85,21 @@ services:
     volumes:
       - elasticsearch_data:/usr/share/elasticsearch/data
 
+  redis:
+    image: redis:7-alpine
+    container_name: ${REDIS_CONTAINER_NAME:-redis}
+    ports:
+      - "${REDIS_PORT:-6379}:6379"
+    networks:
+      - xccm-network
+    volumes:
+      - redis_data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
   app:
     build: .
     image: ${DOCKER_IMAGE:-xccm-backend:latest}
@@ -101,6 +116,8 @@ services:
       SPRING_PROFILES_ACTIVE: ${SPRING_PROFILES_ACTIVE}
       KAFKA_BOOTSTRAP_SERVERS: ${KAFKA_CONTAINER_NAME:-kafka}:${KAFKA_PORT:-9092}
       ELASTICSEARCH_URIS: http://${ELASTICSEARCH_CONTAINER_NAME:-elasticsearch}:9200
+      REDIS_HOST: ${REDIS_CONTAINER_NAME:-redis}
+      REDIS_PORT: ${REDIS_PORT:-6379}
     depends_on:
       postgres:
         condition: service_healthy
@@ -108,8 +125,34 @@ services:
         condition: service_healthy
       elasticsearch:
         condition: service_started
+      redis:
+        condition: service_healthy
     networks:
       - xccm-network
+
+  hocuspocus:
+    build:
+      context: ./hocuspocus
+      dockerfile: Dockerfile
+    container_name: xccm-hocuspocus
+    ports:
+      - "1234:1234"
+    environment:
+      PORT: 1234
+      SPRING_API_URL: http://${APP_CONTAINER_NAME:-app}:8080
+      JWT_SECRET: ${JWT_SECRET}
+      INTERNAL_API_KEY: ${INTERNAL_API_KEY:-hocuspocus-internal-key}
+      NODE_ENV: production
+    depends_on:
+      - app
+    networks:
+      - xccm-network
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD-SHELL", "wget -q --spider http://localhost:1234/health || exit 1"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
 
 volumes:
   postgres_data:
@@ -117,6 +160,7 @@ volumes:
   zookeeper_log:
   kafka_data:
   elasticsearch_data:
+  redis_data:
 
 networks:
   xccm-network:

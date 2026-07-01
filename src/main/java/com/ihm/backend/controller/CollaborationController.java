@@ -20,6 +20,7 @@ import org.springframework.messaging.simp.SimpMessagingTemplate;
 import org.springframework.security.core.Authentication;
 import org.springframework.stereotype.Controller;
 
+import java.util.Map;
 import java.util.Optional;
 import java.util.concurrent.TimeUnit;
 
@@ -67,17 +68,29 @@ public class CollaborationController {
         message.setSenderEmail(userEmail);
         message.setSenderName(user.getFullName());
 
+        // Extraire le vrai nodeId (le frontend envoie granuleId=0 pour LOCK/UNLOCK/BLOCK_UPDATE,
+        // le vrai identifiant est dans payload.nodeId ou message.nodeId selon le type d'action)
+        String nodeId = extractNodeId(message);
+
         switch (message.getType()) {
             case LOCK:
-                if (lockService.acquireLock(message.getGranuleId(), userEmail)) {
+                if (nodeId == null) {
+                    // Pas de nœud identifié : diffuser sans verrou
+                    messagingTemplate.convertAndSend("/topic/projet/" + id, message);
+                    return;
+                }
+                if (lockService.acquireLock(id, nodeId, userEmail)) {
                     messagingTemplate.convertAndSend("/topic/projet/" + id, message);
                 } else {
-                    sendError(userEmail, "Verrou refusé pour l'élément " + message.getGranuleId());
+                    String owner = lockService.getLockOwner(id, nodeId);
+                    sendError(userEmail, "Nœud verrouillé par: " + (owner != null ? owner : "un collaborateur"));
                 }
                 break;
 
             case UNLOCK:
-                lockService.releaseLock(message.getGranuleId(), userEmail);
+                if (nodeId != null) {
+                    lockService.releaseLock(id, nodeId, userEmail);
+                }
                 messagingTemplate.convertAndSend("/topic/projet/" + id, message);
                 if (message.getContent() != null) {
                     courseService.saveContentAsync(id, message.getContent());
@@ -85,29 +98,29 @@ public class CollaborationController {
                 break;
 
             case BLOCK_UPDATE:
-                // Vérifier que l'utilisateur possède le verrou avant de broadcaster une mise à jour
-                String blockOwner = lockService.getLockOwner(message.getGranuleId());
-                if (blockOwner == null || !blockOwner.equals(userEmail)) {
-                    sendError(userEmail, "Vous ne possédez pas le verrou pour l'élément " + message.getGranuleId());
-                    return;
-                }
-                messagingTemplate.convertAndSend("/topic/projet/" + id, message);
-                // Persistance asynchrone du contenu à chaque mise à jour de bloc
-                if (message.getContent() != null) {
-                    courseService.saveContentAsync(id, message.getContent());
-                }
-                break;
-
-            case MOVE:
-            case CURSOR:
-                // Vérifier si l'utilisateur possède le verrou avant de diffuser un MOVE
-                if (message.getType() == CollaborationMessage.MessageType.MOVE) {
-                    String moveOwner = lockService.getLockOwner(message.getGranuleId());
-                    if (moveOwner == null || !moveOwner.equals(userEmail)) {
-                        sendError(userEmail, "Vous ne possédez pas le verrou pour cet élément");
+                // Vérifier qu'aucun autre utilisateur ne possède le verrou sur ce nœud
+                if (nodeId != null) {
+                    String blockOwner = lockService.getLockOwner(id, nodeId);
+                    if (blockOwner != null && !blockOwner.equals(userEmail)) {
+                        sendError(userEmail, "Ce nœud est en cours d'édition par un collaborateur");
                         return;
                     }
                 }
+                messagingTemplate.convertAndSend("/topic/projet/" + id, message);
+                break;
+
+            case MOVE:
+                // Opération structurelle : diffusée sans vérification de verrou de contenu
+                messagingTemplate.convertAndSend("/topic/projet/" + id, message);
+                break;
+
+            case DELETE:
+            case RENAME:
+            case DUPLICATE:
+                messagingTemplate.convertAndSend("/topic/projet/" + id, message);
+                break;
+
+            case CURSOR:
                 messagingTemplate.convertAndSend("/topic/projet/" + id, message);
                 break;
 
@@ -116,6 +129,32 @@ public class CollaborationController {
                 messagingTemplate.convertAndSend("/topic/projet/" + id, message);
                 break;
         }
+    }
+
+    /**
+     * Extrait le nodeId réel du message. Priorité: granuleId explicite et != "0"
+     * > payload.nodeId > message.nodeId. Ignore les valeurs null/vides/"0" envoyées
+     * par le frontend actuel pour LOCK/UNLOCK/BLOCK_UPDATE.
+     */
+    private String extractNodeId(CollaborationMessage message) {
+        if (message.getGranuleId() != null
+                && !message.getGranuleId().isEmpty()
+                && !message.getGranuleId().equals("0")) {
+            return message.getGranuleId();
+        }
+
+        if (message.getPayload() instanceof Map<?, ?> payloadMap) {
+            Object nodeId = payloadMap.get("nodeId");
+            if (nodeId != null && !String.valueOf(nodeId).equals("0") && !String.valueOf(nodeId).isEmpty()) {
+                return String.valueOf(nodeId);
+            }
+        }
+
+        if (message.getNodeId() != null && !message.getNodeId().isEmpty()) {
+            return message.getNodeId();
+        }
+
+        return null;
     }
 
     private void sendError(String userEmail, String errorMessage) {
