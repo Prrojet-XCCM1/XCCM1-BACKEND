@@ -4,7 +4,6 @@ on:
   push:
     branches: ["main"]
 
-
 env:
   REGISTRY: ghcr.io
 
@@ -29,11 +28,10 @@ jobs:
       contents: read
       packages: write
     outputs:
-      image_name: ${{ steps.lower.outputs.image }} # On exporte le nom en minuscule
+      image_name: ${{ steps.lower.outputs.image }}
     steps:
       - uses: actions/checkout@v4
 
-      # ÉTAPE CRUCIALE : On met le nom en minuscules ici
       - name: Lowercase image name
         id: lower
         run: echo "image=$(echo ${{ github.repository }} | tr '[:upper:]' '[:lower:]')" >> $GITHUB_OUTPUT
@@ -73,16 +71,18 @@ jobs:
           username: ${{ secrets.SSH_USER }}
           key: ${{ secrets.SSH_KEY }}
           script: |
-            # On définit le nom de l'image en minuscules pour le VPS aussi
             IMAGE_LOWER=$(echo ${{ github.repository }} | tr '[:upper:]' '[:lower:]')
-            
-            cd ${{ secrets.DEPLOY_PATH || '~/xccm' }}/XCCM1-BACKEND
-            
-            # Connexion au registre sur le VPS pour avoir le droit de pull
-            echo "${{ secrets.GITHUB_TOKEN }}" | docker login ghcr.io -u ${{ github.actor }} --password-stdin
-            
-            # On passe la variable DOCKER_IMAGE directement à docker compose
-            DOCKER_IMAGE=${{ env.REGISTRY }}/$IMAGE_LOWER:latest docker compose -f docker-compose.prod.yml pull
-            DOCKER_IMAGE=${{ env.REGISTRY }}/$IMAGE_LOWER:latest docker compose -f docker-compose.prod.yml up -d
-            
+            FULL_IMAGE="${{ env.REGISTRY }}/$IMAGE_LOWER:latest"
+
+            # Login GHCR avec PAT (persiste après le job CI)
+            echo "${{ secrets.GHCR_TOKEN }}" | docker login ghcr.io -u "${{ secrets.GHCR_USER }}" --password-stdin
+
+            # Pull la nouvelle image
+            docker pull $FULL_IMAGE
+
+            # Redémarrage via docker-compose dans le bon répertoire
+            cd /root/xccm
+            DOCKER_IMAGE=$FULL_IMAGE docker compose up -d app
+
+            # Nettoyage des anciennes images
             docker image prune -f
