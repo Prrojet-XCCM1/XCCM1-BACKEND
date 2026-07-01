@@ -1,5 +1,6 @@
 package com.ihm.backend.dto.request;
 
+import com.fasterxml.jackson.annotation.JsonAlias;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
@@ -13,6 +14,7 @@ public class CourseAIGenerateRequest {
     private String discipline = "general";
     private String level = "L1";
     private String language = "fr";
+    @JsonAlias("exercises_per_chapter")
     private int exercisesPerChapter = 1;
 
     /**
