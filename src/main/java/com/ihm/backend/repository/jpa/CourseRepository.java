@@ -26,6 +26,9 @@ public interface CourseRepository extends JpaRepository<Course, Integer> {
     @Query("SELECT c FROM Course c LEFT JOIN FETCH c.courseClass WHERE c.author.id = :authorId")
     List<Course> findByAuthor_Id(@Param("authorId") UUID authorId);
 
+    @Query("SELECT c FROM Course c LEFT JOIN FETCH c.courseClass WHERE c.status = :status AND c.author.id = :authorId")
+    List<Course> findByStatusAndAuthor_Id(@Param("status") CourseStatus status, @Param("authorId") UUID authorId);
+
     @Query("SELECT c FROM Course c WHERE c.status = 'PUBLISHED' " +
            "AND (LOWER(c.title) LIKE LOWER(CONCAT('%', :query, '%')) " +
            "OR LOWER(c.description) LIKE LOWER(CONCAT('%', :query, '%')) " +

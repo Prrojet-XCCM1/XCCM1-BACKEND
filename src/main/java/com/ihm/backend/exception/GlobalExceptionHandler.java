@@ -64,13 +64,13 @@ public class GlobalExceptionHandler {
     public ResponseEntity<ApiResponse<Void>> handleDataAccessResourceFailure(org.springframework.dao.DataAccessResourceFailureException ex) {
         log.error("Erreur d'accès à la ressource de données (éventuellement Elasticsearch): {}", ex.getMessage());
         return ResponseEntity.status(HttpStatus.SERVICE_UNAVAILABLE)
-                .body(ApiResponse.internalError("Le service de recherche est temporairement indisponible", ex.getMessage()));
+                .body(ApiResponse.internalError("Le service de recherche est temporairement indisponible", null));
     }
 
     @ExceptionHandler(Exception.class)
     public ResponseEntity<ApiResponse<Void>> handleGeneralException(Exception ex) {
         log.error("Une erreur inattendue est survenue", ex);
         return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
-                .body(ApiResponse.internalError("Une erreur interne est survenue", ex.getMessage()));
+                .body(ApiResponse.internalError("Une erreur interne est survenue", null));
     }
 }

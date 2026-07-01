@@ -54,7 +54,7 @@ public class EnrollmentController {
             @PathVariable Long enrollmentId,
             @RequestParam Double progress,
             @AuthenticationPrincipal User user) throws Exception {
-        EnrollmentDTO updated = enrollmentService.updateProgress(enrollmentId, progress);
+        EnrollmentDTO updated = enrollmentService.updateProgress(enrollmentId, progress, user.getId());
         return ResponseEntity.ok(ApiResponse.success("Progression mise à jour", updated));
     }
 
@@ -66,7 +66,7 @@ public class EnrollmentController {
     public ResponseEntity<ApiResponse<EnrollmentDTO>> markAsCompleted(
             @PathVariable Long enrollmentId,
             @AuthenticationPrincipal User user) throws Exception {
-        EnrollmentDTO completed = enrollmentService.markAsCompleted(enrollmentId);
+        EnrollmentDTO completed = enrollmentService.markAsCompleted(enrollmentId, user.getId());
         return ResponseEntity.ok(ApiResponse.success("Cours marqué comme complété", completed));
     }
 

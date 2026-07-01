@@ -24,9 +24,16 @@ public class DataInitializer implements CommandLineRunner {
         if (userRepository.countByRole(UserRole.ADMIN) == 0) {
             log.info("Aucun administrateur trouvé en base. Création du compte administrateur par défaut...");
 
+            String adminEmail = System.getenv().getOrDefault("ADMIN_EMAIL", "admin@xccm.com");
+            String adminPassword = System.getenv("ADMIN_PASSWORD");
+            if (adminPassword == null || adminPassword.isBlank()) {
+                adminPassword = java.util.UUID.randomUUID().toString();
+                log.warn("Variable ADMIN_PASSWORD non définie — mot de passe aléatoire généré. Définissez ADMIN_PASSWORD et relancez l'application.");
+            }
+
             User admin = User.builder()
-                    .email("admin@xccm.com")
-                    .password(passwordEncoder.encode("admin123"))
+                    .email(adminEmail)
+                    .password(passwordEncoder.encode(adminPassword))
                     .firstName("Système")
                     .lastName("Admin")
                     .role(UserRole.ADMIN)
@@ -36,7 +43,7 @@ public class DataInitializer implements CommandLineRunner {
                     .build();
 
             userRepository.save(admin);
-            log.info("Compte administrateur par défaut créé : admin@xccm.com / admin123");
+            log.info("Compte administrateur créé : {}", adminEmail);
         }
     }
 }
