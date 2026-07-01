@@ -60,10 +60,41 @@ jobs:
           tags: ${{ steps.meta.outputs.tags }}
           labels: ${{ steps.meta.outputs.labels }}
 
+      - name: Extract metadata (hocuspocus)
+        id: meta-hocuspocus
+        uses: docker/metadata-action@v5
+        with:
+          images: ${{ env.REGISTRY }}/${{ steps.lower.outputs.image }}-hocuspocus
+          tags: |
+            type=raw,value=latest
+            type=sha
+
+      - name: Build and push (hocuspocus)
+        uses: docker/build-push-action@v6
+        with:
+          context: ./hocuspocus
+          push: true
+          tags: ${{ steps.meta-hocuspocus.outputs.tags }}
+          labels: ${{ steps.meta-hocuspocus.outputs.labels }}
+
   deploy:
     needs: build
     runs-on: ubuntu-latest
     steps:
+      - uses: actions/checkout@v4
+
+      # Le VPS n'a PAS le repo cloné (seulement Docker) : on lui envoie juste le fichier
+      # dont il a besoin pour savoir quels conteneurs lancer.
+      - name: Copy docker-compose.prod.yml to VPS
+        uses: appleboy/scp-action@v0.1.7
+        with:
+          host: ${{ secrets.SSH_HOST }}
+          username: ${{ secrets.SSH_USER }}
+          key: ${{ secrets.SSH_KEY }}
+          source: "docker-compose.prod.yml"
+          target: ${{ secrets.DEPLOY_PATH || '~/xccm' }}/XCCM1-BACKEND
+          strip_components: 0
+
       - name: Deploy to VPS
         uses: appleboy/ssh-action@v1.2.0
         with:

@@ -15,6 +15,7 @@ import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
 import jakarta.persistence.JoinColumn;
 import jakarta.persistence.JoinTable;
+import jakarta.persistence.Lob;
 import jakarta.persistence.ManyToMany;
 import jakarta.persistence.ManyToOne;
 import lombok.AllArgsConstructor;
@@ -86,4 +87,8 @@ public class Course {
         inverseJoinColumns = @JoinColumn(name = "user_id")
     )
     private java.util.List<User> editors;
+
+    @Lob
+    @Column(name = "yjs_state", columnDefinition = "bytea")
+    private byte[] yjsState;
 }

@@ -1,0 +1,21 @@
+{
+  "name": "xccm-hocuspocus",
+  "version": "1.0.0",
+  "description": "Serveur de collaboration Y.js pour XCCM via Hocuspocus",
+  "main": "server.js",
+  "type": "module",
+  "scripts": {
+    "start": "node server.js",
+    "dev": "node --watch server.js"
+  },
+  "dependencies": {
+    "@hocuspocus/server": "^2.15.0",
+    "@hocuspocus/extension-database": "^2.15.0",
+    "@hocuspocus/extension-logger": "^2.15.0",
+    "axios": "^1.7.0",
+    "jsonwebtoken": "^9.0.2"
+  },
+  "engines": {
+    "node": ">=18.0.0"
+  }
+}

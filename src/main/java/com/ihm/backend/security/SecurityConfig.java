@@ -94,6 +94,9 @@ public class SecurityConfig {
                         // === ADMIN ===
                         .requestMatchers("/api/v1/admin/**").hasRole("ADMIN")
 
+                        // === HOCUSPOCUS (endpoints internes, protégés par X-Internal-Key, pas par JWT) ===
+                        .requestMatchers("/api/internal/**").permitAll()
+
                         // === TOUT LE RESTE ===
                         .anyRequest().authenticated())
                 .exceptionHandling(exception -> exception
