@@ -9,12 +9,9 @@ import com.ihm.backend.dto.response.EnrichedCourseResponse;
 import com.ihm.backend.entity.User;
 import com.ihm.backend.enums.CourseStatus;
 import com.ihm.backend.service.CourseService;
-<<<<<<< HEAD
 import com.ihm.backend.service.LLMIndexingService;
-import org.springframework.beans.factory.annotation.Autowired;
-=======
 import lombok.RequiredArgsConstructor;
->>>>>>> 7628df93522680e4561ba262bd3aa16a4c93e5e3
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
