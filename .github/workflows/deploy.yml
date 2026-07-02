@@ -116,6 +116,6 @@ jobs:
             # les conteneurs dont l'image ou la config a changé (postgres/kafka/elasticsearch
             # ne redémarrent pas s'ils n'ont pas bougé).
             docker compose pull
-            docker compose up -d
+            docker compose up -d --remove-orphans
 
             docker image prune -f
