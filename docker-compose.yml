@@ -38,10 +38,24 @@ services:
     volumes:
       - elasticsearch_data:/usr/share/elasticsearch/data
 
+  redis:
+    image: redis:7-alpine
+    container_name: ${REDIS_CONTAINER_NAME:-redis}
+    networks:
+      - xccm-network
+    volumes:
+      - redis_data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
   app:
     build: .
     image: ${DOCKER_IMAGE:-xccm-backend:latest}
     container_name: ${APP_CONTAINER_NAME}
+    env_file: .env
     ports:
       - "${APP_PORT}:8080"
     environment:
@@ -53,17 +67,43 @@ services:
       EMAIL_PASSWORD: ${EMAIL_PASSWORD}
       SPRING_PROFILES_ACTIVE: ${SPRING_PROFILES_ACTIVE}
       ELASTICSEARCH_URIS: http://${ELASTICSEARCH_CONTAINER_NAME:-elasticsearch}:9200
+      LLM_SERVICE_URL: ${LLM_SERVICE_URL:-http://xccm-llm-service:8000}
+      REDIS_HOST: ${REDIS_CONTAINER_NAME:-redis}
+      REDIS_PORT: ${REDIS_PORT:-6379}
     depends_on:
       postgres:
         condition: service_healthy
       elasticsearch:
         condition: service_started
+      redis:
+        condition: service_healthy
     networks:
       - xccm-network
+
+  hocuspocus:
+    build:
+      context: ./hocuspocus
+      dockerfile: Dockerfile
+    image: ${HOCUSPOCUS_IMAGE:-ghcr.io/prrojet-xccm1/xccm1-backend-hocuspocus:latest}
+    container_name: xccm-hocuspocus
+    ports:
+      - "127.0.0.1:1234:1234"
+    environment:
+      PORT: 1234
+      SPRING_API_URL: http://${APP_CONTAINER_NAME:-app}:8080
+      JWT_SECRET: ${JWT_SECRET}
+      INTERNAL_API_KEY: ${INTERNAL_API_KEY:-hocuspocus-internal-key}
+      NODE_ENV: production
+    depends_on:
+      - app
+    networks:
+      - xccm-network
+    restart: unless-stopped
 
 volumes:
   postgres_data:
   elasticsearch_data:
+  redis_data:
 
 networks:
   xccm-network:
