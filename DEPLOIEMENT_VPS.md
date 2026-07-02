@@ -1,156 +1,123 @@
 # Déploiement XCCM1-BACKEND sur le VPS Contabo
 
-Le projet tourne déjà en production sur un VPS Contabo (`109.199.105.251`, domaine
-`xccm1.duckdns.org`). Ce guide couvre :
-- **Section A** : ce qu'il faut faire *maintenant* pour mettre en ligne le nouveau serveur
-  Hocuspocus (Y.js) sur ce VPS déjà déployé.
-- **Section B** : la référence complète (utile si un jour il faut recréer le VPS depuis zéro).
+Le projet tourne en production sur un VPS Contabo (`109.199.105.251`, domaine
+`xccm1.duckdns.org`), partagé avec plusieurs autres projets (IAXCCM, XCCM1-LLM-SERVICE,
+etc.), chacun dans son propre dossier sous `/root/xccm/`.
+
+**État réel confirmé (2026-07-01)** :
+- Le déploiement de XCCM1-BACKEND tourne depuis `/root/xccm` (racine), avec un seul fichier
+  `/root/xccm/docker-compose.yml` et un seul `/root/xccm/.env` — **il n'y a pas de
+  `docker-compose.prod.yml` séparé** (ce fichier existait dans le repo mais n'a jamais
+  correspondu à ce qui tourne réellement ; il a été supprimé).
+- Le service Hocuspocus (Y.js) et Redis (requis par `LockService`) sont maintenant déployés
+  et fonctionnels sur ce VPS.
+- Le pipeline CI/CD (`.github/workflows/deploy.yml`) a été corrigé pour cibler ce vrai chemin.
 
 Le frontend (Next.js) n'est **pas** couvert ici : il est déployé séparément sur Vercel.
 
 ---
 
-## A. Déployer Hocuspocus sur le VPS déjà en production
+## A. Comment Hocuspocus a été mis en ligne (référence / à refaire si besoin)
 
-### A.1 Ce qui a changé dans le repo
+### A.1 Diagnostic qui a mené ici
 
-- `docker-compose.prod.yml` contient maintenant deux nouveaux services : `redis` (requis par
-  `LockService`, qui n'était rattaché à aucun conteneur Redis auparavant) et `hocuspocus`
-  (serveur de collaboration temps réel Y.js, code dans [hocuspocus/](hocuspocus/)).
-- `.github/workflows/deploy.yml` build et pousse maintenant **deux** images sur `ghcr.io` :
-  `xccm1-backend` (déjà existant) et `xccm1-backend-hocuspocus` (nouveau). Le VPS n'a **pas** le
-  repo cloné (seulement Docker) : le job `deploy` copie donc désormais `docker-compose.prod.yml`
-  directement sur le VPS via `scp` (`appleboy/scp-action`) avant de lancer `docker compose pull/up`,
-  plutôt que de faire un `git pull` qui échouerait en l'absence de dépôt git local.
-- `nginx.conf` (copie locale de référence, non versionnée sur GitHub — voir A.4) a été mis à jour
-  avec un nouveau bloc `location /collab/` pour router le trafic WebSocket vers Hocuspocus.
+Le premier essai de déploiement automatique échouait silencieusement car le pipeline CI/CD
+ciblait `~/xccm/XCCM1-BACKEND/docker-compose.prod.yml`, un chemin et un fichier qui n'ont
+jamais existé dans la vraie installation. La vraie pile (Postgres nommé `xccm-db`, backend
+nommé `xccm1-backend`, etc.) tourne depuis `/root/xccm/docker-compose.yml`. Cette confusion
+venait d'un fichier `docker-compose.prod.yml` présent dans le repo mais jamais réellement
+utilisé sur le VPS — il a été supprimé pour éviter que ça se reproduise.
 
-### A.2 Pré-requis sur le VPS (`.env`)
+### A.2 Ce qui a été fait pour corriger
 
-Le fichier `.env` situé à côté de `docker-compose.prod.yml` sur le VPS (dans
-`~/xccm/XCCM1-BACKEND` ou l'équivalent de votre installation) doit contenir une clé
-`INTERNAL_API_KEY` — elle sécurise les endpoints `/api/internal/**` que Hocuspocus appelle
-pour lire/écrire l'état Y.js d'un cours. Si elle n'existe pas encore :
+1. Ajout de `INTERNAL_API_KEY` dans `/root/xccm/.env` (clé partagée entre le backend et
+   Hocuspocus pour sécuriser `/api/internal/**`).
+2. Ajout des services `redis` et `hocuspocus` directement dans `/root/xccm/docker-compose.yml`,
+   en respectant les conventions déjà en place dans ce fichier (`${APP_CONTAINER_NAME}` pour
+   joindre le backend, réseau `xccm-network` déclaré localement — pas externe).
+3. Ajout de `REDIS_HOST`/`REDIS_PORT` dans l'environnement du service `app`.
+4. `docker compose up -d` (sans préciser de service) : ça a recréé `redis` (nouveau),
+   `hocuspocus` (nouveau) et `app` (recréé pour prendre en compte les nouvelles variables
+   d'environnement), et laissé `postgres`/`kafka`/`zookeeper`/`elasticsearch` totalement
+   intacts (leur config n'avait pas changé).
+5. Ajout d'un bloc `location /collab/` dans `nginx.conf` (voir A.3) pour exposer Hocuspocus
+   depuis Internet via `wss://xccm1.duckdns.org/collab/`.
 
-```bash
-ssh deploy@109.199.105.251
-cd ~/xccm/XCCM1-BACKEND   # adapter si le chemin réel diffère
-grep INTERNAL_API_KEY .env || echo "INTERNAL_API_KEY=$(openssl rand -hex 32)" >> .env
-```
+Le repo (`docker-compose.yml`, `.github/workflows/deploy.yml`) a été mis à jour en miroir de
+cet état réel, pour que les prochains `git push` sur `main` maintiennent tout ça synchronisé
+automatiquement (voir section A.4).
 
-`JWT_SECRET` existe déjà (utilisé par le backend) : Hocuspocus le réutilise tel quel pour
-vérifier les tokens des utilisateurs, pas besoin d'y toucher.
-
-### A.3 Déployer les conteneurs
-
-Le plus simple : poussez sur `main`, le pipeline CI/CD s'occupe de tout (build des deux images,
-copie de `docker-compose.prod.yml` sur le VPS par `scp`, puis `docker compose pull && up -d`).
-
-Pour forcer un déploiement immédiat sans attendre/pousser sur `main`, il faut d'abord amener le
-`docker-compose.prod.yml` à jour sur le VPS vous-même (puisqu'il n'y a pas de dépôt git cloné
-là-bas), puis lancer les conteneurs :
-
-```bash
-# Depuis votre machine locale, dans le dossier du repo
-scp docker-compose.prod.yml deploy@109.199.105.251:~/xccm/XCCM1-BACKEND/docker-compose.prod.yml
-
-ssh deploy@109.199.105.251
-cd ~/xccm/XCCM1-BACKEND
-
-echo "<GITHUB_TOKEN_read:packages>" | docker login ghcr.io -u VOTRE_USER_GITHUB --password-stdin
-export DOCKER_IMAGE=ghcr.io/prrojet-xccm1/xccm1-backend:latest
-export HOCUSPOCUS_IMAGE=ghcr.io/prrojet-xccm1/xccm1-backend-hocuspocus:latest
-docker compose -f docker-compose.prod.yml pull
-docker compose -f docker-compose.prod.yml up -d
-
-docker compose -f docker-compose.prod.yml ps      # redis, backend, hocuspocus doivent être "Up"
-docker compose -f docker-compose.prod.yml logs hocuspocus --tail=50
-```
-
-Le conteneur `hocuspocus` n'est publié que sur `127.0.0.1:1234` (voir
-`docker-compose.prod.yml`), donc à ce stade il n'est pas encore joignable depuis Internet —
-c'est Nginx qui doit faire le pont, à l'étape suivante.
-
-### A.4 Mettre à jour Nginx sur le VPS
+### A.3 Nginx
 
 `nginx.conf` à la racine de ce repo est une **copie locale de référence** du fichier réellement
-utilisé sur le VPS — il n'est pas synchronisé automatiquement (pas de `git pull` ni de volume
-Docker ne le pousse sur le serveur). Il faut le copier à la main.
+utilisé sur le VPS (`/etc/nginx/nginx.conf`, remplace le fichier nginx principal, pas un site
+dans `sites-available/`) — il n'est jamais synchronisé automatiquement, il faut le copier à la
+main après modification :
 
-> ⚠️ **Bug trouvé en le testant** (`nginx -t`) : la copie que vous m'avez donnée n'avait pas
-> l'accolade fermante du bloc `http { ... }` (il manquait un `}` à la toute fin du fichier).
-> Je l'ai corrigée dans `nginx.conf`. Si le fichier réellement en place sur le VPS a la bonne
-> accolade, tant mieux ; sinon c'est probablement pour ça qu'un `nginx -t` échouerait si vous
-> deviez le recharger tel quel. Repartez bien de la version corrigée de ce repo.
+```bash
+# Depuis votre machine locale
+scp "nginx.conf" root@109.199.105.251:/tmp/nginx.conf
 
-Le nouveau bloc ajouté (à adapter si vous préférez un autre chemin que `/collab/`) :
+# Sur le VPS
+ssh root@109.199.105.251
+cp /etc/nginx/nginx.conf /etc/nginx/nginx.conf.bak-$(date +%F)
+cp /tmp/nginx.conf /etc/nginx/nginx.conf
+nginx -t && systemctl reload nginx
+```
+
+Le bloc ajouté pour Hocuspocus (cible `127.0.0.1:1234`, pas l'IP publique, puisque
+`docker-compose.yml` ne publie ce port qu'en loopback) :
 
 ```nginx
-    # Serveur de collaboration Y.js (Hocuspocus) - édition de texte temps réel
-    # Le conteneur n'est publié que sur 127.0.0.1:1234 (voir docker-compose.prod.yml),
-    # donc on cible localhost ici, pas l'IP publique.
     location /collab/ {
         proxy_pass http://127.0.0.1:1234/;
         proxy_http_version 1.1;
         proxy_set_header Upgrade $http_upgrade;
         proxy_set_header Connection $connection_upgrade;
         proxy_set_header Host $host;
-
         proxy_set_header X-Real-IP $remote_addr;
         proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
         proxy_set_header X-Forwarded-Proto $scheme;
-
         proxy_read_timeout 3600s;
         proxy_send_timeout 3600s;
         proxy_buffering off;
     }
 ```
 
-Notez qu'il cible `127.0.0.1:1234` et non l'IP publique `109.199.105.251:1234` comme le font
-les autres blocs (`/ws`, `/ai/`, `/llm/`) : c'est volontaire et plus sûr, puisque
-`docker-compose.prod.yml` ne publie Hocuspocus que sur loopback. Nginx tournant sur la même
-machine, `127.0.0.1` fonctionne très bien et évite d'exposer le port 1234 sur l'IP publique.
+Côté frontend (Vercel), le client Hocuspocus doit pointer vers
+`wss://xccm1.duckdns.org/collab/<courseId>`. Le WebSocket STOMP existant reste sur
+`wss://xccm1.duckdns.org/ws` (inchangé).
 
-Pour appliquer sur le VPS :
+### A.4 Ce que fait maintenant le CI/CD à chaque push sur `main`
 
-```bash
-# Depuis votre machine locale : copier le fichier corrigé vers le VPS
-scp "nginx.conf" deploy@109.199.105.251:/tmp/nginx.conf
+1. **Job `build`** : construit et pousse deux images sur `ghcr.io` — `xccm1-backend` et
+   `xccm1-backend-hocuspocus` (buildée depuis [hocuspocus/](hocuspocus/)).
+2. **Job `deploy`** :
+   - copie `docker-compose.yml` du repo vers `/root/xccm/docker-compose.yml` sur le VPS
+     (`appleboy/scp-action`) — donc gardez ce fichier comme source de vérité, ne le modifiez
+     plus à la main sur le VPS sans reporter le changement dans le repo (sinon le prochain
+     push l'écrasera) ;
+   - se connecte en SSH, fait `docker login` (avec `GHCR_TOKEN`/`GHCR_USER`, un PAT — plus
+     fiable que le `GITHUB_TOKEN` éphémère pour cet usage), puis `docker compose pull` +
+     `docker compose up -d` (sans filtrer de service : ne recrée que ce qui a changé).
 
-# Sur le VPS
-ssh deploy@109.199.105.251
-sudo cp /etc/nginx/nginx.conf /etc/nginx/nginx.conf.bak-$(date +%F)   # sauvegarde de sécurité
-sudo cp /tmp/nginx.conf /etc/nginx/nginx.conf
-sudo nginx -t                     # DOIT afficher "syntax is ok" / "test is successful"
-sudo systemctl reload nginx
-```
+**Secrets GitHub Actions requis** (Settings → Secrets and variables → Actions) :
 
-> Le fichier remplace le `nginx.conf` **principal** (`/etc/nginx/nginx.conf`), pas un site dans
-> `sites-available/` — c'est la convention déjà utilisée sur ce VPS (le fichier contient ses
-> propres blocs `events {}` et `http {}`), gardez-la pour rester cohérent avec l'existant.
-
-### A.5 Vérification
-
-```bash
-# Doit répondre 200
-curl -I https://xccm1.duckdns.org/actuator/health
-
-# Doit initier un handshake WebSocket (101 Switching Protocols) une fois un client Y.js connecté
-curl -i -N \
-  -H "Connection: Upgrade" -H "Upgrade: websocket" \
-  -H "Sec-WebSocket-Version: 13" -H "Sec-WebSocket-Key: dGhlIHNhbXBsZSBub25jZQ==" \
-  https://xccm1.duckdns.org/collab/
-```
-
-Côté frontend (Vercel), pointez le client Hocuspocus vers `wss://xccm1.duckdns.org/collab/<courseId>`
-et le WebSocket STOMP existant reste sur `wss://xccm1.duckdns.org/ws` (inchangé).
+| Secret | Rôle |
+|---|---|
+| `SSH_HOST` | IP du VPS |
+| `SSH_USER` | utilisateur SSH (`root` actuellement) |
+| `SSH_KEY` | clé privée SSH correspondante |
+| `GHCR_TOKEN` | PAT GitHub avec droit `read:packages` (pour `docker login` sur le VPS) |
+| `GHCR_USER` | nom d'utilisateur GitHub associé au PAT |
+| `DEPLOY_PATH` | *(optionnel)* chemin si différent de `/root/xccm` |
 
 ---
 
 ## B. Référence complète (recréer le VPS depuis zéro)
 
-Cette section documente l'ensemble de la stack pour le cas où il faudrait reconstruire le VPS
-(nouveau serveur, migration, etc.). Si le VPS actuel fonctionne déjà, vous pouvez l'ignorer.
+Si un jour il faut reconstruire le VPS entièrement. Si le VPS actuel fonctionne déjà, ignorez
+cette section.
 
 ### B.1 Architecture
 
@@ -160,112 +127,92 @@ Internet
    ▼
 Nginx (installé sur l'hôte, PAS dans Docker) — TLS via Let's Encrypt (xccm1.duckdns.org)
    │
-   ├─ /            → 127.0.0.1 ou IP publique:8080  (backend Spring Boot, REST)
+   ├─ /            → :8080  (backend Spring Boot, REST)
    ├─ /ws          → :8080  (STOMP WebSocket, collaboration structurelle : LOCK/MOVE/DELETE…)
    ├─ /collab/     → 127.0.0.1:1234  (Hocuspocus, édition de texte Y.js temps réel)
-   ├─ /llm/, /api/v1/notebooks/*  → :8000  (service LLM, hors de ce repo)
-   └─ /ai/         → :5000  (agent IA, hors de ce repo)
+   ├─ /llm/, /api/v1/notebooks/*  → :8000  (service LLM, hors de ce repo, projet séparé)
+   └─ /ai/         → :5000  (agent IA, hors de ce repo, projet séparé)
    ▼
 ┌─────────────────────────────────────────────────────────┐
-│ Docker (réseau "xccm-network")                          │
-│  backend (8080) ── postgres                              │
-│         │        ── kafka + zookeeper                    │
-│         │        ── elasticsearch                        │
-│         │        ── redis (verrous de collaboration)     │
-│  hocuspocus (1234) ── appelle backend via /api/internal   │
+│ Docker (réseau "xccm-network", déclaré dans              │
+│ /root/xccm/docker-compose.yml)                           │
+│  app (backend, 8080) ── postgres (xccm-db)                │
+│         │             ── kafka + zookeeper                │
+│         │             ── elasticsearch                    │
+│         │             ── redis (verrous de collaboration) │
+│  hocuspocus (1234) ── appelle backend via /api/internal    │
 └─────────────────────────────────────────────────────────┘
 ```
 
-Le service LLM (`:8000`) et l'agent IA (`:5000`) référencés dans `nginx.conf` ne font pas partie
-de ce repo Spring Boot : ils sont déployés séparément sur le même VPS.
+Le service LLM (`:8000`) et l'agent IA (`:5000`) sont des projets à part entière, déployés
+séparément dans `/root/xccm/XCCM1-LLM-SERVICE/` et `/root/xccm/IAXCCM/`.
 
 ### B.2 Prérequis
 
 - VPS Contabo (2 vCPU / 8 Go RAM minimum : Elasticsearch + Kafka sont gourmands), Ubuntu 22.04/24.04.
 - Domaine ou sous-domaine DuckDNS pointant vers l'IP du VPS.
-- Accès `sudo` sur le VPS et droits admin sur le repo GitHub (pour les secrets Actions).
+- Accès root (ou sudo) sur le VPS, et droits admin sur le repo GitHub.
 
 ### B.3 Préparation initiale du VPS
 
 ```bash
-ssh root@VOTRE_IP_CONTABO
-adduser deploy
-usermod -aG sudo deploy
-rsync --archive --chown=deploy:deploy ~/.ssh /home/deploy
-# Durcir /etc/ssh/sshd_config : PermitRootLogin no / PasswordAuthentication no
-systemctl restart ssh
-
 curl -fsSL https://get.docker.com | sh
-usermod -aG docker deploy
 ```
 
-Pare-feu (seuls 22, 80, 443 ouverts vers l'extérieur ; Postgres/Kafka/Elasticsearch/Redis et les
-ports internes des services applicatifs restent en loopback ou réseau Docker interne) :
+Pare-feu (seuls 22, 80, 443 ouverts vers l'extérieur) :
 
 ```bash
-sudo ufw allow OpenSSH
-sudo ufw allow 80/tcp
-sudo ufw allow 443/tcp
-sudo ufw enable
+ufw allow OpenSSH
+ufw allow 80/tcp
+ufw allow 443/tcp
+ufw enable
 ```
 
 ### B.4 DNS
-
-Enregistrement `A` chez votre registrar (ou DuckDNS) vers l'IP publique du VPS :
 
 ```bash
 dig +short xccm1.duckdns.org
 ```
 
-### B.5 Réseau Docker externe
+### B.5 Nginx + HTTPS
 
 ```bash
-docker network create xccm-network
+apt install -y nginx certbot python3-certbot-nginx
 ```
 
-### B.6 Nginx + HTTPS
+Copier `nginx.conf` de ce repo vers `/etc/nginx/nginx.conf` (voir A.3), puis :
 
 ```bash
-sudo apt install -y nginx certbot python3-certbot-nginx
+nginx -t && systemctl reload nginx
+certbot --nginx -d xccm1.duckdns.org
 ```
 
-Copier `nginx.conf` de ce repo vers `/etc/nginx/nginx.conf` sur le VPS (voir A.4 pour la
-procédure et le contenu à jour), puis :
+### B.6 Créer le dossier de déploiement et `.env`
 
 ```bash
-sudo nginx -t && sudo systemctl reload nginx
-sudo certbot --nginx -d xccm1.duckdns.org
+mkdir -p /root/xccm && cd /root/xccm
 ```
 
-### B.7 Créer le dossier de déploiement et configurer `.env`
-
-Le VPS n'a pas besoin du code source : Docker Compose n'a besoin que de
-`docker-compose.prod.yml` et de `.env` pour tourner (les images sont construites ailleurs, par
-GitHub Actions, et récupérées via `docker pull`). Créez simplement le dossier attendu par le
-pipeline CI/CD :
+Envoyer `docker-compose.yml` depuis votre machine locale — les déploiements suivants le
+referont automatiquement via le CI/CD (voir A.4) :
 
 ```bash
-mkdir -p ~/xccm/XCCM1-BACKEND && cd ~/xccm/XCCM1-BACKEND
+scp docker-compose.yml root@109.199.105.251:/root/xccm/docker-compose.yml
 ```
 
-Puis, depuis votre machine locale (où le repo est cloné), envoyez `docker-compose.prod.yml` une
-première fois — les déploiements suivants le referont automatiquement via le CI/CD (voir A.1) :
-
-```bash
-scp docker-compose.prod.yml deploy@109.199.105.251:~/xccm/XCCM1-BACKEND/docker-compose.prod.yml
-```
-
-Sur le VPS, créez ensuite `.env` à côté :
-
-```bash
-nano ~/xccm/XCCM1-BACKEND/.env
-```
+Puis créer `.env` à côté :
 
 ```dotenv
-# --- PostgreSQL ---
-POSTGRES_DB=xccm
-POSTGRES_USER=admin
+# --- Docker : noms de conteneurs & ports ---
+POSTGRES_CONTAINER_NAME=xccm-db
+POSTGRES_VERSION=17
+POSTGRES_DB=xccm1
+POSTGRES_USER=postgres
 POSTGRES_PASSWORD=<mot_de_passe_fort>
+POSTGRES_PORT=5432
+APP_CONTAINER_NAME=xccm1-backend
+APP_PORT=8080
+DOCKER_IMAGE=ghcr.io/prrojet-xccm1/xccm1-backend:latest
 
 # --- JWT & sécurité ---
 JWT_SECRET=<clé_base64_d'au_moins_64_caractères>
@@ -275,12 +222,6 @@ INTERNAL_API_KEY=<chaîne_aléatoire_d'au_moins_32_caractères>
 EMAIL_USERNAME=votre_email@gmail.com
 EMAIL_PASSWORD=<mot_de_passe_application_gmail>
 
-# --- OAuth2 (si utilisé) ---
-GOOGLE_CLIENT_ID=
-GOOGLE_CLIENT_SECRET=
-GITHUB_CLIENT_ID=
-GITHUB_CLIENT_SECRET=
-
 # --- LLM externe (si utilisé) ---
 LLM_SERVICE_URL=http://xccm-llm-service:8000
 
@@ -288,56 +229,51 @@ LLM_SERVICE_URL=http://xccm-llm-service:8000
 FRONTEND_URL=https://frontend-xccm-12027.vercel.app
 CORS_ALLOWED_ORIGINS=https://frontend-xccm-12027.vercel.app
 IP_ADDRESS=https://xccm1.duckdns.org
+
+SPRING_PROFILES_ACTIVE=prod
 ```
 
-> `JWT_SECRET` doit être identique entre le backend et Hocuspocus — `docker-compose.prod.yml`
-> le repasse automatiquement au conteneur `hocuspocus`. Ne le régénérez jamais après une mise
-> en prod : ça invaliderait tous les tokens existants.
+> `JWT_SECRET` doit être identique entre le backend et Hocuspocus — `docker-compose.yml` le
+> repasse automatiquement au conteneur `hocuspocus`. Ne le régénérez jamais après une mise en
+> prod : ça invaliderait tous les tokens existants.
 
-### B.8 Secrets GitHub Actions
+### B.7 Secrets GitHub Actions
 
-| Secret | Valeur |
-|---|---|
-| `SSH_HOST` | IP publique du VPS Contabo |
-| `SSH_USER` | `deploy` |
-| `SSH_KEY` | Clé privée SSH correspondant à la clé publique autorisée sur le VPS |
-| `DEPLOY_PATH` | *(optionnel)* chemin si différent de `~/xccm` |
+Voir le tableau en A.4.
 
-### B.9 Vérifications post-déploiement
+### B.8 Vérifications post-déploiement
 
 ```bash
-docker compose -f docker-compose.prod.yml ps
-docker compose -f docker-compose.prod.yml logs -f backend
+docker compose ps
+docker compose logs -f app
 curl -I https://xccm1.duckdns.org/actuator/health
 ```
 
-### B.10 Maintenance courante
+### B.9 Maintenance courante
 
 ```bash
 # Logs
-docker compose -f docker-compose.prod.yml logs -f hocuspocus
+docker compose logs -f hocuspocus
 
 # Redémarrer un service
-docker compose -f docker-compose.prod.yml restart backend
+docker compose restart app
 
 # Sauvegarder PostgreSQL
-docker exec xccm-postgres pg_dump -U admin xccm > backup_$(date +%F).sql
+docker exec xccm-db pg_dump -U postgres xccm1 > backup_$(date +%F).sql
 
 # Mise à jour manuelle (le VPS n'a pas de dépôt git : on renvoie le compose par scp si besoin)
-scp docker-compose.prod.yml deploy@109.199.105.251:~/xccm/XCCM1-BACKEND/docker-compose.prod.yml
-cd ~/xccm/XCCM1-BACKEND
-docker compose -f docker-compose.prod.yml pull
-docker compose -f docker-compose.prod.yml up -d
+scp docker-compose.yml root@109.199.105.251:/root/xccm/docker-compose.yml
+cd /root/xccm
+docker compose pull
+docker compose up -d
 ```
 
-### B.11 Limites connues
+### B.10 Limites connues
 
-- Le `healthcheck` du service `hocuspocus` dans `docker-compose.yml` (dev) cible
-  `http://localhost:1234/health`, une route qui n'existe pas dans un serveur Hocuspocus par
-  défaut (WebSocket only). Le conteneur peut apparaître `unhealthy` même s'il fonctionne
-  normalement — sans impact fonctionnel, juste cosmétique dans `docker compose ps`.
-- Le service LLM et l'agent IA référencés dans `nginx.conf` (`:8000`, `:5000`) ne sont déployés
-  par aucun `docker-compose*.yml` de ce repo : ils vivent ailleurs sur le même VPS et doivent
-  être maintenus indépendamment.
+- Le service LLM et l'agent IA référencés dans `nginx.conf` (`:8000`, `:5000`) sont des projets
+  séparés déployés indépendamment sur le même VPS — pas gérés par ce repo.
 - Kafka/Zookeeper et Elasticsearch sont gourmands en RAM ; sur un VPS à 4 Go ou moins,
   surveillez `docker stats`.
+- Le VPS héberge plusieurs projets non liés (IAXCCM, XCCM1-LLM-SERVICE, securite_sociale,
+  medical_api, datapipe, ml-iot, iot_soil...) dans des sous-dossiers séparés de `/root/xccm/` —
+  vérifiez toujours le bon dossier avant toute commande `docker compose`.
