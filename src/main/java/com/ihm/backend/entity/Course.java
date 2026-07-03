@@ -15,7 +15,6 @@ import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
 import jakarta.persistence.JoinColumn;
 import jakarta.persistence.JoinTable;
-import jakarta.persistence.Lob;
 import jakarta.persistence.ManyToMany;
 import jakarta.persistence.ManyToOne;
 import lombok.AllArgsConstructor;
@@ -88,7 +87,9 @@ public class Course {
     )
     private java.util.List<User> editors;
 
-    @Lob
+    // @Lob mappe byte[] -> oid (Large Object) en Hibernate 6/PostgreSQL, ce qui casse
+    // toute mise à jour du cours (colonne réelle = bytea). On force VARBINARY (= bytea).
+    @JdbcTypeCode(SqlTypes.VARBINARY)
     @Column(name = "yjs_state", columnDefinition = "bytea")
     private byte[] yjsState;
 }
