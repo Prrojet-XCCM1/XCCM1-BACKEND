@@ -115,4 +115,13 @@ public class CourseInvitationService {
         }
         return userRepository.findByFirstNameContainingIgnoreCaseOrLastNameContainingIgnoreCase(query, query);
     }
+
+    /**
+     * Retourne la liste des collaborateurs (éditeurs) d'un cours.
+     */
+    public List<User> getCollaborators(Integer courseId) {
+        Course course = courseRepository.findById(courseId)
+                .orElseThrow(() -> new ResourceNotFoundException("Cours non trouvé: " + courseId));
+        return course.getEditors() != null ? course.getEditors() : List.of();
+    }
 }

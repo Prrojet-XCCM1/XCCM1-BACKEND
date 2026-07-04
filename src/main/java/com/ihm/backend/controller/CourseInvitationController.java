@@ -44,6 +44,14 @@ public class CourseInvitationController {
         return ResponseEntity.ok(ApiResponse.success("Invitation acceptée. Vous êtes maintenant éditeur.", null));
     }
 
+    @GetMapping("/collaborators/{courseId}")
+    public ResponseEntity<ApiResponse<List<AuthorDTO>>> getCollaborators(@PathVariable Integer courseId) {
+        List<AuthorDTO> collaborators = invitationService.getCollaborators(courseId).stream()
+                .map(AuthorDTO::fromUser)
+                .collect(Collectors.toList());
+        return ResponseEntity.ok(ApiResponse.success("Collaborateurs récupérés", collaborators));
+    }
+
     @GetMapping("/search-users")
     @PreAuthorize("hasRole('TEACHER')")
     public ResponseEntity<ApiResponse<List<AuthorDTO>>> searchUsers(@RequestParam String query) {
