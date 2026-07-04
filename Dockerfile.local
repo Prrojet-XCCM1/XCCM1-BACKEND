@@ -1,0 +1,9 @@
+# Dockerfile rapide pour tests LOCAUX : le jar est déjà buildé en natif (mvnw sur l'hôte,
+# réutilise ~/.m2). On ne fait qu'une COPY — pas de build Maven dans le conteneur.
+FROM eclipse-temurin:21-jre-jammy
+WORKDIR /app
+RUN addgroup --system spring && adduser --system --ingroup spring spring
+USER spring:spring
+COPY target/backend-0.0.1-SNAPSHOT.jar app.jar
+EXPOSE 8080
+ENTRYPOINT ["java", "-jar", "app.jar"]
