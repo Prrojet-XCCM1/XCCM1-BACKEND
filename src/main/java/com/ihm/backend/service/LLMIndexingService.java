@@ -55,15 +55,36 @@ public class LLMIndexingService {
 
     // ── Indexation asynchrone ────────────────────────────────────────────────
 
+    /** Taille max du contenu indexé (caractères) pour maîtriser la taille de l'embedding. */
+    private static final int MAX_INDEX_CONTENT_CHARS = 8000;
+
     @Async
     public void indexCourse(Course course) {
         try {
             String url = llmServiceUrl + "/api/v1/index/course";
 
+            // Contenu riche pour le RAG : on aplatit le corps TipTap en texte plutôt
+            // que d'indexer uniquement la description (trop maigre). Fallback description/titre.
+            String bodyText = extractPlainText(course.getContent());
+            StringBuilder full = new StringBuilder();
+            if (course.getDescription() != null && !course.getDescription().isBlank()) {
+                full.append(course.getDescription()).append("\n\n");
+            }
+            if (!bodyText.isBlank()) {
+                full.append(bodyText);
+            }
+            String content = full.toString().strip();
+            if (content.isBlank()) {
+                content = course.getTitle();
+            }
+            if (content.length() > MAX_INDEX_CONTENT_CHARS) {
+                content = content.substring(0, MAX_INDEX_CONTENT_CHARS);
+            }
+
             Map<String, Object> body = new HashMap<>();
             body.put("id", course.getId());
             body.put("title", course.getTitle());
-            body.put("content", course.getDescription() != null ? course.getDescription() : course.getTitle());
+            body.put("content", content);
 
             Map<String, Object> metadata = new HashMap<>();
             metadata.put("author", course.getAuthor().getFullName());
@@ -71,10 +92,43 @@ public class LLMIndexingService {
             body.put("metadata", metadata);
 
             sendRequest(url, body);
-            log.info("Successfully requested indexing for course: {}", course.getTitle());
+            log.info("Successfully requested indexing for course {} ({} chars)", course.getTitle(), content.length());
         } catch (Exception e) {
             log.error("Failed to index course {}: {}", course.getId(), e.getMessage());
         }
+    }
+
+    /**
+     * Aplatit un document TipTap (JSON déjà désérialisé en Map/List) en texte brut,
+     * en concaténant récursivement tous les champs "text" des nœuds.
+     */
+    @SuppressWarnings("unchecked")
+    private String extractPlainText(Object node) {
+        if (node == null) {
+            return "";
+        }
+        StringBuilder sb = new StringBuilder();
+        if (node instanceof Map) {
+            Map<String, Object> map = (Map<String, Object>) node;
+            Object text = map.get("text");
+            if (text instanceof String) {
+                sb.append((String) text).append(' ');
+            }
+            Object children = map.get("content");
+            if (children != null) {
+                sb.append(extractPlainText(children));
+            }
+            // Sauts de ligne entre blocs de type titre/paragraphe pour la lisibilité
+            Object type = map.get("type");
+            if ("heading".equals(type) || "paragraph".equals(type)) {
+                sb.append('\n');
+            }
+        } else if (node instanceof List) {
+            for (Object child : (List<Object>) node) {
+                sb.append(extractPlainText(child));
+            }
+        }
+        return sb.toString();
     }
 
     @Async

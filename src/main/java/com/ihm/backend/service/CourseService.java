@@ -139,6 +139,23 @@ public class CourseService {
         return courseMapper.toResponse(course);
     }
 
+    /**
+     * Ré-indexe (RAG) tous les cours déjà publiés. Utile après une amélioration
+     * de l'indexation (ex : passage de la description au contenu complet) pour
+     * rafraîchir l'index vectoriel `granules` sans re-publier chaque cours.
+     * Idempotent : l'indexation est un upsert par cours.
+     *
+     * @return le nombre de cours ré-indexés.
+     */
+    public int reindexAllPublishedCourses() {
+        List<Course> publishedCourses = courseRepository.findByStatus(CourseStatus.PUBLISHED);
+        for (Course course : publishedCourses) {
+            llmIndexingService.indexCourse(course);
+        }
+        log.info("Ré-indexation RAG demandée pour {} cours publié(s)", publishedCourses.size());
+        return publishedCourses.size();
+    }
+
     public List<CourseResponse> getCoursesByStatusForAuthor(UUID authorId, CourseStatus courseStatus)
             throws Exception {
         return courseMapper.toResponse(courseRepository.findByStatusAndAuthor_Id(courseStatus, authorId));

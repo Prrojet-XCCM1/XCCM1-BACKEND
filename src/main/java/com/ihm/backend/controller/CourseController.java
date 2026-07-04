@@ -209,7 +209,19 @@ public class CourseController {
         if (request == null) {
             return ResponseEntity.ok(ApiResponse.success("Aucune donnée fournie", Collections.emptyList()));
         }
-        return ResponseEntity.ok(ApiResponse.success("Recommandations récupérées", 
+        return ResponseEntity.ok(ApiResponse.success("Recommandations récupérées",
                 courseService.getRecommendations(request.getTitle(), request.getDescription(), request.getContent())));
+    }
+
+    /**
+     * Ré-indexe (RAG) tous les cours déjà publiés. À déclencher une fois après
+     * l'amélioration de l'indexation (contenu complet). Idempotent.
+     */
+    @PreAuthorize("hasRole('TEACHER')")
+    @PostMapping("/reindex")
+    public ResponseEntity<ApiResponse<Map<String, Object>>> reindexPublishedCourses() {
+        int count = courseService.reindexAllPublishedCourses();
+        return ResponseEntity.ok(ApiResponse.success(
+                "Ré-indexation lancée", Map.of("reindexed", count)));
     }
 }
