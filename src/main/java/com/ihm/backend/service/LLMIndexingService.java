@@ -4,7 +4,6 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.ihm.backend.dto.request.CourseAIGenerateRequest;
 import com.ihm.backend.entity.Course;
 import com.ihm.backend.entity.Exercise;
-import com.ihm.backend.entity.User;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
@@ -12,11 +11,11 @@ import org.springframework.context.annotation.Lazy;
 import org.springframework.http.HttpEntity;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
+import org.springframework.http.ResponseEntity;
 import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Service;
 import org.springframework.web.client.RestTemplate;
 import org.springframework.web.reactive.function.client.WebClient;
-import org.springframework.web.reactive.function.client.WebClientResponseException;
 import org.springframework.web.servlet.mvc.method.annotation.SseEmitter;
 
 import java.time.Duration;
@@ -25,7 +24,8 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
-import org.springframework.http.ResponseEntity;
+import java.util.concurrent.atomic.AtomicReference;
+import java.util.function.Consumer;
 
 @Slf4j
 @Service
@@ -51,6 +51,9 @@ public class LLMIndexingService {
                 // Timeout de réponse : 5 minutes (cours longs)
                 .codecs(cfg -> cfg.defaultCodecs().maxInMemorySize(4 * 1024 * 1024))
                 .build();
+    }
+
+    public record CourseGenerationProgress(String event, String message, Integer percent) {
     }
 
     // ── Indexation asynchrone ────────────────────────────────────────────────
@@ -232,17 +235,10 @@ public class LLMIndexingService {
         ObjectMapper mapper = new ObjectMapper();
         final StringBuilder sseBuffer = new StringBuilder();
 
-        Map<String, Object> body = new HashMap<>();
-        body.put("description", request.getDescription());
-        body.put("discipline", request.getDiscipline());
-        body.put("level", request.getLevel());
-        body.put("language", request.getLanguage());
-        body.put("exercises_per_chapter", request.getExercisesPerChapter());
-
         webClient.post()
                 .uri("/api/v1/generate")
                 .contentType(MediaType.APPLICATION_JSON)
-                .bodyValue(body)
+                .bodyValue(buildGenerateBody(request))
                 .retrieve()
                 .bodyToFlux(String.class)
                 .timeout(Duration.ofMinutes(6))
@@ -250,7 +246,10 @@ public class LLMIndexingService {
                         chunk -> {
                             try {
                                 sseBuffer.append(chunk);
-                                forwardParsedSseEvents(sseBuffer, emitter, mapper, courseId);
+                                consumeParsedSseEvents(
+                                        sseBuffer,
+                                        event -> forwardToEmitter(event, emitter, mapper, courseId)
+                                );
                             } catch (Exception e) {
                                 log.warn("Error forwarding SSE chunk: {}", e.getMessage());
                             }
@@ -269,7 +268,10 @@ public class LLMIndexingService {
                         },
                         () -> {
                             try {
-                                forwardParsedSseEvents(sseBuffer, emitter, mapper, courseId);
+                                consumeParsedSseEvents(
+                                        sseBuffer,
+                                        event -> forwardToEmitter(event, emitter, mapper, courseId)
+                                );
                             } catch (Exception ignored) {}
                             emitter.complete();
                         }
@@ -277,14 +279,64 @@ public class LLMIndexingService {
     }
 
     /**
+     * Consomme le flux SSE du service LLM jusqu'à l'événement final "done", puis
+     * retourne le payload JSON complet. Le streaming reste interne au backend :
+     * le client HTTP n'a plus besoin de garder une connexion ouverte.
+     */
+    public Map<String, Object> generateCourseAndCollectResult(
+            CourseAIGenerateRequest request,
+            Consumer<CourseGenerationProgress> progressConsumer
+    ) {
+        ObjectMapper mapper = new ObjectMapper();
+        StringBuilder sseBuffer = new StringBuilder();
+        AtomicReference<Map<String, Object>> resultRef = new AtomicReference<>();
+
+        for (String chunk : webClient.post()
+                .uri("/api/v1/generate")
+                .contentType(MediaType.APPLICATION_JSON)
+                .bodyValue(buildGenerateBody(request))
+                .retrieve()
+                .bodyToFlux(String.class)
+                .timeout(Duration.ofMinutes(15))
+                .toIterable()) {
+            sseBuffer.append(chunk);
+            try {
+                consumeParsedSseEvents(
+                        sseBuffer,
+                        event -> collectFinalResult(event, mapper, request.getCourseId(), progressConsumer, resultRef)
+                );
+            } catch (RuntimeException ex) {
+                throw ex;
+            } catch (Exception ex) {
+                throw new IllegalStateException("Erreur lors du traitement de la réponse LLM", ex);
+            }
+        }
+
+        try {
+            consumeParsedSseEvents(
+                    sseBuffer,
+                    event -> collectFinalResult(event, mapper, request.getCourseId(), progressConsumer, resultRef)
+            );
+        } catch (RuntimeException ex) {
+            throw ex;
+        } catch (Exception ex) {
+            throw new IllegalStateException("Erreur lors du traitement final de la réponse LLM", ex);
+        }
+
+        Map<String, Object> result = resultRef.get();
+        if (result == null) {
+            throw new IllegalStateException("La génération IA s'est terminée sans résultat exploitable.");
+        }
+        return result;
+    }
+
+    /**
      * Parse les blocs SSE du LLM Service et les retransmet proprement au frontend.
      * Sans cela, SseEmitter.send(rawChunk) double-encapsule le flux et le client
      * ne reçoit jamais l'événement {@code done}.
      */
-    private void forwardParsedSseEvents(StringBuilder buffer,
-                                        SseEmitter emitter,
-                                        ObjectMapper mapper,
-                                        Integer courseId) throws Exception {
+    private void consumeParsedSseEvents(StringBuilder buffer,
+                                        Consumer<ParsedSseEvent> eventConsumer) throws Exception {
         while (true) {
             int[] separator = findSseEventSeparator(buffer);
             if (separator == null) {
@@ -312,21 +364,7 @@ public class LLMIndexingService {
             if (data.isEmpty()) {
                 continue;
             }
-
-            emitter.send(SseEmitter.event().name(eventName).data(data));
-
-            if ("done".equals(eventName) && courseId != null) {
-                try {
-                    Map<?, ?> parsed = mapper.readValue(data, Map.class);
-                    if (parsed.containsKey("content")) {
-                        String contentJson = mapper.writeValueAsString(parsed.get("content"));
-                        courseService.saveContentAsync(courseId, contentJson);
-                        log.info("Auto-save triggered for course {}", courseId);
-                    }
-                } catch (Exception ex) {
-                    log.warn("Could not parse done payload for auto-save: {}", ex.getMessage());
-                }
-            }
+            eventConsumer.accept(new ParsedSseEvent(eventName, data));
         }
     }
 
@@ -364,5 +402,76 @@ public class LLMIndexingService {
         headers.setContentType(MediaType.APPLICATION_JSON);
         HttpEntity<Map<String, Object>> entity = new HttpEntity<>(body, headers);
         restTemplate.postForEntity(url, entity, String.class);
+    }
+
+    private Map<String, Object> buildGenerateBody(CourseAIGenerateRequest request) {
+        Map<String, Object> body = new HashMap<>();
+        body.put("description", request.getDescription());
+        body.put("discipline", request.getDiscipline());
+        body.put("level", request.getLevel());
+        body.put("language", request.getLanguage());
+        body.put("exercises_per_chapter", request.getExercisesPerChapter());
+        return body;
+    }
+
+    private void forwardToEmitter(ParsedSseEvent event,
+                                  SseEmitter emitter,
+                                  ObjectMapper mapper,
+                                  Integer courseId) {
+        try {
+            emitter.send(SseEmitter.event().name(event.eventName()).data(event.data()));
+            maybeAutoSaveGeneratedContent(event, mapper, courseId);
+        } catch (Exception ex) {
+            throw new IllegalStateException("Impossible de retransmettre le flux SSE", ex);
+        }
+    }
+
+    private void collectFinalResult(ParsedSseEvent event,
+                                    ObjectMapper mapper,
+                                    Integer courseId,
+                                    Consumer<CourseGenerationProgress> progressConsumer,
+                                    AtomicReference<Map<String, Object>> resultRef) {
+        try {
+            Map<String, Object> parsed = mapper.readValue(event.data(), Map.class);
+            String message = parsed.get("message") instanceof String ? (String) parsed.get("message") : event.eventName();
+            Integer percent = parsed.get("pct") instanceof Number ? ((Number) parsed.get("pct")).intValue() : null;
+
+            progressConsumer.accept(new CourseGenerationProgress(event.eventName(), message, percent));
+
+            if ("error".equals(event.eventName())) {
+                throw new IllegalStateException(message);
+            }
+
+            if ("done".equals(event.eventName())) {
+                resultRef.set(parsed);
+                maybeAutoSaveGeneratedContent(event, mapper, courseId);
+            }
+        } catch (IllegalStateException ex) {
+            throw ex;
+        } catch (Exception ex) {
+            throw new IllegalStateException("Impossible d'interpréter un événement SSE LLM", ex);
+        }
+    }
+
+    private void maybeAutoSaveGeneratedContent(ParsedSseEvent event,
+                                               ObjectMapper mapper,
+                                               Integer courseId) {
+        if (!"done".equals(event.eventName()) || courseId == null) {
+            return;
+        }
+
+        try {
+            Map<?, ?> parsed = mapper.readValue(event.data(), Map.class);
+            if (parsed.containsKey("content")) {
+                String contentJson = mapper.writeValueAsString(parsed.get("content"));
+                courseService.saveContentAsync(courseId, contentJson);
+                log.info("Auto-save triggered for course {}", courseId);
+            }
+        } catch (Exception ex) {
+            log.warn("Could not parse done payload for auto-save: {}", ex.getMessage());
+        }
+    }
+
+    private record ParsedSseEvent(String eventName, String data) {
     }
 }

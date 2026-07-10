@@ -4,11 +4,14 @@ import com.ihm.backend.dto.request.CourseAIGenerateRequest;
 import com.ihm.backend.dto.request.CourseCreateRequest;
 import com.ihm.backend.dto.request.CourseUpdateRequest;
 import com.ihm.backend.dto.response.ApiResponse;
+import com.ihm.backend.dto.response.CourseGenerationJobCreatedResponse;
+import com.ihm.backend.dto.response.CourseGenerationJobResponse;
 import com.ihm.backend.dto.response.CourseResponse;
 import com.ihm.backend.dto.response.EnrichedCourseResponse;
 import com.ihm.backend.entity.User;
 import com.ihm.backend.enums.CourseStatus;
 import com.ihm.backend.service.CourseService;
+import com.ihm.backend.service.CourseGenerationJobService;
 import com.ihm.backend.service.LLMIndexingService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -35,6 +38,7 @@ import java.util.concurrent.Executors;
 public class CourseController {
 
     private final CourseService courseService;
+    private final CourseGenerationJobService courseGenerationJobService;
 
     @Autowired
     private LLMIndexingService llmIndexingService;
@@ -205,6 +209,30 @@ public class CourseController {
         executor.shutdown();
 
         return emitter;
+    }
+
+    @PreAuthorize("hasRole('TEACHER')")
+    @PostMapping("/generate-ai/jobs")
+    public ResponseEntity<ApiResponse<CourseGenerationJobCreatedResponse>> startCourseGenerationJob(
+            @RequestBody CourseAIGenerateRequest request,
+            @AuthenticationPrincipal User currentUser) {
+        CourseGenerationJobCreatedResponse created = courseGenerationJobService.startJob(currentUser.getId(), request);
+        ApiResponse<CourseGenerationJobCreatedResponse> body = ApiResponse.<CourseGenerationJobCreatedResponse>builder()
+                .code(202)
+                .success(true)
+                .message("Job de génération IA lancé")
+                .data(created)
+                .build();
+        return ResponseEntity.status(HttpStatus.ACCEPTED).body(body);
+    }
+
+    @PreAuthorize("hasRole('TEACHER')")
+    @GetMapping("/generate-ai/jobs/{jobId}")
+    public ResponseEntity<ApiResponse<CourseGenerationJobResponse>> getCourseGenerationJob(
+            @PathVariable UUID jobId,
+            @AuthenticationPrincipal User currentUser) {
+        CourseGenerationJobResponse job = courseGenerationJobService.getJob(jobId, currentUser.getId());
+        return ResponseEntity.ok(ApiResponse.success("Statut du job récupéré", job));
     }
 
     @PreAuthorize("hasRole('TEACHER')")
