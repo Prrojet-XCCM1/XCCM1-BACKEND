@@ -21,6 +21,7 @@ import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 import org.springframework.web.servlet.mvc.method.annotation.SseEmitter;
 
+import jakarta.servlet.http.HttpServletResponse;
 import java.util.Collections;
 import java.util.List;
 import java.util.Map;
@@ -189,7 +190,11 @@ public class CourseController {
     @PostMapping(value = "/generate-ai", produces = MediaType.TEXT_EVENT_STREAM_VALUE)
     public SseEmitter generateCourseWithAI(
             @RequestBody CourseAIGenerateRequest request,
-            @AuthenticationPrincipal User currentUser) {
+            @AuthenticationPrincipal User currentUser,
+            HttpServletResponse response) {
+
+        response.setHeader("Cache-Control", "no-cache, no-transform");
+        response.setHeader("X-Accel-Buffering", "no");
 
         // Timeout 6 min (aligné avec le WebClient côté LLMIndexingService)
         SseEmitter emitter = new SseEmitter(360_000L);

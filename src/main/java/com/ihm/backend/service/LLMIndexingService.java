@@ -230,6 +230,7 @@ public class LLMIndexingService {
                                      SseEmitter emitter,
                                      Integer courseId) {
         ObjectMapper mapper = new ObjectMapper();
+        final StringBuilder sseBuffer = new StringBuilder();
 
         Map<String, Object> body = new HashMap<>();
         body.put("description", request.getDescription());
@@ -243,41 +244,17 @@ public class LLMIndexingService {
                 .contentType(MediaType.APPLICATION_JSON)
                 .bodyValue(body)
                 .retrieve()
-                // Le LLM Service retourne du texte brut (SSE)
                 .bodyToFlux(String.class)
                 .timeout(Duration.ofMinutes(6))
                 .subscribe(
-                        // onNext : retransmettre chaque ligne au frontend
                         chunk -> {
                             try {
-                                // Le flux arrive par lignes séparées (SSE)
-                                for (String line : chunk.split("\n")) {
-                                    if (line.startsWith("event:")) {
-                                        // ignoré ici, géré par le parsing ci-dessous
-                                    } else if (line.startsWith("data:")) {
-                                        String data = line.substring(5).trim();
-                                        // Détecter l'événement "done" pour auto-save
-                                        if (courseId != null && data.contains("\"content\"")) {
-                                            try {
-                                                Map<?, ?> parsed = mapper.readValue(data, Map.class);
-                                                if (parsed.containsKey("content")) {
-                                                    String contentJson = mapper.writeValueAsString(
-                                                            parsed.get("content"));
-                                                    courseService.saveContentAsync(courseId, contentJson);
-                                                    log.info("Auto-save triggered for course {}", courseId);
-                                                }
-                                            } catch (Exception ex) {
-                                                log.warn("Could not parse done payload for auto-save: {}", ex.getMessage());
-                                            }
-                                        }
-                                    }
-                                }
-                                emitter.send(chunk);
+                                sseBuffer.append(chunk);
+                                forwardParsedSseEvents(sseBuffer, emitter, mapper, courseId);
                             } catch (Exception e) {
                                 log.warn("Error forwarding SSE chunk: {}", e.getMessage());
                             }
                         },
-                        // onError
                         error -> {
                             log.error("Error streaming course generation: {}", error.getMessage());
                             try {
@@ -290,9 +267,88 @@ public class LLMIndexingService {
                             } catch (Exception ignored) {}
                             emitter.completeWithError(error);
                         },
-                        // onComplete
-                        emitter::complete
+                        () -> {
+                            try {
+                                forwardParsedSseEvents(sseBuffer, emitter, mapper, courseId);
+                            } catch (Exception ignored) {}
+                            emitter.complete();
+                        }
                 );
+    }
+
+    /**
+     * Parse les blocs SSE du LLM Service et les retransmet proprement au frontend.
+     * Sans cela, SseEmitter.send(rawChunk) double-encapsule le flux et le client
+     * ne reçoit jamais l'événement {@code done}.
+     */
+    private void forwardParsedSseEvents(StringBuilder buffer,
+                                        SseEmitter emitter,
+                                        ObjectMapper mapper,
+                                        Integer courseId) throws Exception {
+        while (true) {
+            int[] separator = findSseEventSeparator(buffer);
+            if (separator == null) {
+                return;
+            }
+
+            String block = buffer.substring(0, separator[0]);
+            buffer.delete(0, separator[0] + separator[1]);
+
+            String eventName = "message";
+            StringBuilder dataBuilder = new StringBuilder();
+            for (String rawLine : block.split("\n")) {
+                String line = rawLine.endsWith("\r") ? rawLine.substring(0, rawLine.length() - 1) : rawLine;
+                if (line.startsWith("event:")) {
+                    eventName = line.substring(6).trim();
+                } else if (line.startsWith("data:")) {
+                    if (dataBuilder.length() > 0) {
+                        dataBuilder.append('\n');
+                    }
+                    dataBuilder.append(line.substring(5).trim());
+                }
+            }
+
+            String data = dataBuilder.toString().trim();
+            if (data.isEmpty()) {
+                continue;
+            }
+
+            emitter.send(SseEmitter.event().name(eventName).data(data));
+
+            if ("done".equals(eventName) && courseId != null) {
+                try {
+                    Map<?, ?> parsed = mapper.readValue(data, Map.class);
+                    if (parsed.containsKey("content")) {
+                        String contentJson = mapper.writeValueAsString(parsed.get("content"));
+                        courseService.saveContentAsync(courseId, contentJson);
+                        log.info("Auto-save triggered for course {}", courseId);
+                    }
+                } catch (Exception ex) {
+                    log.warn("Could not parse done payload for auto-save: {}", ex.getMessage());
+                }
+            }
+        }
+    }
+
+    /** Retourne [index, length] du séparateur d'événement SSE, ou null si incomplet. */
+    private int[] findSseEventSeparator(StringBuilder buffer) {
+        String text = buffer.toString();
+        int lf = text.indexOf("\n\n");
+        int crlf = text.indexOf("\r\n\r\n");
+
+        if (lf < 0 && crlf < 0) {
+            return null;
+        }
+        if (lf < 0) {
+            return new int[] { crlf, 4 };
+        }
+        if (crlf < 0) {
+            return new int[] { lf, 2 };
+        }
+        if (crlf <= lf) {
+            return new int[] { crlf, 4 };
+        }
+        return new int[] { lf, 2 };
     }
 
     // ── Surcharge de compatibilité (sans courseId) ───────────────────────────
