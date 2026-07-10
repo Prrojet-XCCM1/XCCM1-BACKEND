@@ -14,9 +14,11 @@ import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Service;
+import org.springframework.http.client.reactive.ReactorClientHttpConnector;
 import org.springframework.web.client.RestTemplate;
 import org.springframework.web.reactive.function.client.WebClient;
 import org.springframework.web.servlet.mvc.method.annotation.SseEmitter;
+import reactor.netty.http.client.HttpClient;
 
 import java.time.Duration;
 import java.util.Collections;
@@ -46,10 +48,14 @@ public class LLMIndexingService {
 
     public LLMIndexingService(@Value("${llm.service.url:http://localhost:8000}") String llmServiceUrl) {
         this.llmServiceUrl = llmServiceUrl;
+        // Timeout HTTP long : la génération multi-agents peut dépasser 15 min
+        // (rate-limit Groq). Les heartbeats SSE du LLM maintiennent le flux actif.
+        HttpClient httpClient = HttpClient.create()
+                .responseTimeout(Duration.ofMinutes(45));
         this.webClient = WebClient.builder()
                 .baseUrl(llmServiceUrl)
-                // Timeout de réponse : 5 minutes (cours longs)
-                .codecs(cfg -> cfg.defaultCodecs().maxInMemorySize(4 * 1024 * 1024))
+                .clientConnector(new ReactorClientHttpConnector(httpClient))
+                .codecs(cfg -> cfg.defaultCodecs().maxInMemorySize(16 * 1024 * 1024))
                 .build();
     }
 
@@ -241,7 +247,8 @@ public class LLMIndexingService {
                 .bodyValue(buildGenerateBody(request))
                 .retrieve()
                 .bodyToFlux(String.class)
-                .timeout(Duration.ofMinutes(6))
+                // Idle timeout entre chunks SSE (heartbeats LLM toutes les ~20s)
+                .timeout(Duration.ofMinutes(5))
                 .subscribe(
                         chunk -> {
                             try {
@@ -297,7 +304,9 @@ public class LLMIndexingService {
                 .bodyValue(buildGenerateBody(request))
                 .retrieve()
                 .bodyToFlux(String.class)
-                .timeout(Duration.ofMinutes(15))
+                // Idle timeout entre événements SSE — pas la durée totale.
+                // Le pipeline LLM émet un heartbeat ~toutes les 20s pendant l'expansion.
+                .timeout(Duration.ofMinutes(5))
                 .toIterable()) {
             sseBuffer.append(chunk);
             try {
