@@ -10,6 +10,7 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Lazy;
 import org.springframework.http.HttpEntity;
 import org.springframework.http.HttpHeaders;
+import org.springframework.http.HttpStatusCode;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.scheduling.annotation.Async;
@@ -18,6 +19,7 @@ import org.springframework.http.client.reactive.ReactorClientHttpConnector;
 import org.springframework.web.client.RestTemplate;
 import org.springframework.web.reactive.function.client.WebClient;
 import org.springframework.web.servlet.mvc.method.annotation.SseEmitter;
+import reactor.core.publisher.Mono;
 import reactor.netty.http.client.HttpClient;
 
 import java.time.Duration;
@@ -26,12 +28,13 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
-import java.util.concurrent.atomic.AtomicReference;
 import java.util.function.Consumer;
 
 @Slf4j
 @Service
 public class LLMIndexingService {
+    private static final Duration STREAM_IDLE_TIMEOUT = Duration.ofMinutes(30);
+    private static final Duration SYNC_GENERATION_TIMEOUT = Duration.ofMinutes(45);
 
     @Value("${llm.service.url:http://localhost:8000}")
     private String llmServiceUrl;
@@ -48,10 +51,10 @@ public class LLMIndexingService {
 
     public LLMIndexingService(@Value("${llm.service.url:http://localhost:8000}") String llmServiceUrl) {
         this.llmServiceUrl = llmServiceUrl;
-        // Timeout HTTP long : la génération multi-agents peut dépasser 15 min
-        // (rate-limit Groq). Les heartbeats SSE du LLM maintiennent le flux actif.
+        // Timeout HTTP long : la génération multi-agents peut durer longtemps
+        // (rate-limit / contenu important), surtout sur l'endpoint synchrone.
         HttpClient httpClient = HttpClient.create()
-                .responseTimeout(Duration.ofMinutes(45));
+                .responseTimeout(SYNC_GENERATION_TIMEOUT);
         this.webClient = WebClient.builder()
                 .baseUrl(llmServiceUrl)
                 .clientConnector(new ReactorClientHttpConnector(httpClient))
@@ -247,8 +250,9 @@ public class LLMIndexingService {
                 .bodyValue(buildGenerateBody(request))
                 .retrieve()
                 .bodyToFlux(String.class)
-                // Idle timeout entre chunks SSE (heartbeats LLM toutes les ~20s)
-                .timeout(Duration.ofMinutes(5))
+                // SSE legacy conservé, avec marge large si des proxies tamponnent
+                // quelques événements malgré les heartbeats applicatifs.
+                .timeout(STREAM_IDLE_TIMEOUT)
                 .subscribe(
                         chunk -> {
                             try {
@@ -294,48 +298,39 @@ public class LLMIndexingService {
             CourseAIGenerateRequest request,
             Consumer<CourseGenerationProgress> progressConsumer
     ) {
-        ObjectMapper mapper = new ObjectMapper();
-        StringBuilder sseBuffer = new StringBuilder();
-        AtomicReference<Map<String, Object>> resultRef = new AtomicReference<>();
+        progressConsumer.accept(new CourseGenerationProgress(
+                "running",
+                "Génération en cours...",
+                null
+        ));
 
-        for (String chunk : webClient.post()
-                .uri("/api/v1/generate")
+        Map<String, Object> result = webClient.post()
+                .uri("/api/v1/generate/sync")
                 .contentType(MediaType.APPLICATION_JSON)
                 .bodyValue(buildGenerateBody(request))
                 .retrieve()
-                .bodyToFlux(String.class)
-                // Idle timeout entre événements SSE — pas la durée totale.
-                // Le pipeline LLM émet un heartbeat ~toutes les 20s pendant l'expansion.
-                .timeout(Duration.ofMinutes(5))
-                .toIterable()) {
-            sseBuffer.append(chunk);
-            try {
-                consumeParsedSseEvents(
-                        sseBuffer,
-                        event -> collectFinalResult(event, mapper, request.getCourseId(), progressConsumer, resultRef)
-                );
-            } catch (RuntimeException ex) {
-                throw ex;
-            } catch (Exception ex) {
-                throw new IllegalStateException("Erreur lors du traitement de la réponse LLM", ex);
-            }
-        }
+                .onStatus(
+                        HttpStatusCode::isError,
+                        response -> response.bodyToMono(String.class)
+                                .defaultIfEmpty("Erreur inconnue du service LLM")
+                                .flatMap(body -> Mono.error(new IllegalStateException(
+                                        "Erreur service LLM (" + response.statusCode() + ") : " + body
+                                )))
+                )
+                .bodyToMono(Map.class)
+                .timeout(SYNC_GENERATION_TIMEOUT)
+                .block();
 
-        try {
-            consumeParsedSseEvents(
-                    sseBuffer,
-                    event -> collectFinalResult(event, mapper, request.getCourseId(), progressConsumer, resultRef)
-            );
-        } catch (RuntimeException ex) {
-            throw ex;
-        } catch (Exception ex) {
-            throw new IllegalStateException("Erreur lors du traitement final de la réponse LLM", ex);
-        }
-
-        Map<String, Object> result = resultRef.get();
         if (result == null) {
             throw new IllegalStateException("La génération IA s'est terminée sans résultat exploitable.");
         }
+
+        maybeAutoSaveGeneratedContent(result, request.getCourseId());
+        progressConsumer.accept(new CourseGenerationProgress(
+                "done",
+                "Cours généré avec succès.",
+                100
+        ));
         return result;
     }
 
@@ -435,33 +430,6 @@ public class LLMIndexingService {
         }
     }
 
-    private void collectFinalResult(ParsedSseEvent event,
-                                    ObjectMapper mapper,
-                                    Integer courseId,
-                                    Consumer<CourseGenerationProgress> progressConsumer,
-                                    AtomicReference<Map<String, Object>> resultRef) {
-        try {
-            Map<String, Object> parsed = mapper.readValue(event.data(), Map.class);
-            String message = parsed.get("message") instanceof String ? (String) parsed.get("message") : event.eventName();
-            Integer percent = parsed.get("pct") instanceof Number ? ((Number) parsed.get("pct")).intValue() : null;
-
-            progressConsumer.accept(new CourseGenerationProgress(event.eventName(), message, percent));
-
-            if ("error".equals(event.eventName())) {
-                throw new IllegalStateException(message);
-            }
-
-            if ("done".equals(event.eventName())) {
-                resultRef.set(parsed);
-                maybeAutoSaveGeneratedContent(event, mapper, courseId);
-            }
-        } catch (IllegalStateException ex) {
-            throw ex;
-        } catch (Exception ex) {
-            throw new IllegalStateException("Impossible d'interpréter un événement SSE LLM", ex);
-        }
-    }
-
     private void maybeAutoSaveGeneratedContent(ParsedSseEvent event,
                                                ObjectMapper mapper,
                                                Integer courseId) {
@@ -471,13 +439,24 @@ public class LLMIndexingService {
 
         try {
             Map<?, ?> parsed = mapper.readValue(event.data(), Map.class);
-            if (parsed.containsKey("content")) {
-                String contentJson = mapper.writeValueAsString(parsed.get("content"));
-                courseService.saveContentAsync(courseId, contentJson);
-                log.info("Auto-save triggered for course {}", courseId);
-            }
+            maybeAutoSaveGeneratedContent(parsed, courseId);
         } catch (Exception ex) {
             log.warn("Could not parse done payload for auto-save: {}", ex.getMessage());
+        }
+    }
+
+    private void maybeAutoSaveGeneratedContent(Map<?, ?> parsed, Integer courseId) {
+        if (courseId == null || parsed == null || !parsed.containsKey("content")) {
+            return;
+        }
+
+        try {
+            ObjectMapper mapper = new ObjectMapper();
+            String contentJson = mapper.writeValueAsString(parsed.get("content"));
+            courseService.saveContentAsync(courseId, contentJson);
+            log.info("Auto-save triggered for course {}", courseId);
+        } catch (Exception ex) {
+            log.warn("Could not persist generated content for course {}: {}", courseId, ex.getMessage());
         }
     }
 
